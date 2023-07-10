@@ -1,0 +1,47 @@
+** ML Primer
+*** Feature selection/engineering
+**** One-hot encoding
+***** Common problems
+- Not working well with tree-based modesl: decision trees, random forests, etc.
+  One-hot encoding can lead to high-dimensional sparse feature representations, which can negatively impact the performance of tree-based models. These models rely on splitting features based on thresholds, and high dimensionality can lead to inefficient splits and slower training. Additionally, tree-based models can handle categorical variables directly without one-hot encoding.
+#+begin_src python :tangle one-hot.py
+  from sklearn.datasets import load_iris
+  from sklearn.model_selection import train_test_split
+  from sklearn.tree import DecisionTreeClassifier
+  from sklearn.preprocessing import OneHotEncoder
+
+  # Load the Iris dataset
+  iris = load_iris()
+  X = iris.data
+  y = iris.target
+
+  # Split the data into train and test sets
+  X_train, X_test, y_train, y_test = train_test_split(
+      X, y, test_size=0.2, random_state=42
+  )
+
+  # One-hot encode the features
+  encoder = OneHotEncoder()
+  X_train_encoded = encoder.fit_transform(X_train)
+  X_test_encoded = encoder.transform(X_test)
+
+  # Train a decision tree classifier on one-hot encoded data
+  tree_model = DecisionTreeClassifier()
+  tree_model.fit(X_train_encoded, y_train)
+
+  # Evaluate the model on the test set
+  accuracy = tree_model.score(X_test_encoded, y_test)
+  print("Accuracy:", accuracy)
+#+end_src
+
+- Expensive computation/memory costs
+**** Mean encoding
+**** Feature hashing
+**** Cross feature
+**** Embedding
+*** Training pipeline
+*** Loss function and metrics evaluations
+*** Sampling
+*** DL model architecture
+*** A/B testing
+*** Deployment patterns
