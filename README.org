@@ -1,12 +1,23 @@
-* ML System Design Primer
-** Scope and frame the question
-*** Loss function and metrics evaluations
-** Data engineering
-*** Sampling
-*** Training pipeline
-** Feature selection/engineering
-*** One-hot encoding
-**** Common problems
+#+html_head: <link rel="stylesheet" href="https://sandyuraz.com/styles/org.css">
+#+title: ML System Design Primer
+#+bibliography: bib/main.bib
+#+latex_header: \setlength{\parindent}{0pt}
+* Scope and frame the question
+** Loss function and metrics evaluations
+References [fn:15] [fn:12]
+* Data engineering
+** Sampling
+References [fn:13]
+** Training pipeline
+** Architecture
+- Database
+- SOA
+- Event-based
+  + pubsub
+  + Message queue
+* Feature selection/engineering
+** One-hot encoding
+*** Common problems
 - Not work well with tree-based modesl: decision trees, random forests, etc.
   One-hot encoding can lead to high-dimensional sparse feature representations, which can negatively impact the performance of tree-based models. These models rely on splitting features based on thresholds, and high dimensionality can lead to inefficient splits and slower training. Additionally, tree-based models can handle categorical variables directly without one-hot encoding.
   #+begin_src python :tangle src/one-hot.py :comments link
@@ -39,10 +50,10 @@
   print("Accuracy:", accuracy)
 #+end_src
 - Expensive computation/memory costs
-*** Mean encoding
+** Mean encoding
 Mean encoding, also known as target encoding or likelihood encoding, is a technique used in machine learning to convert categorical variables into numerical representations. It involves replacing each category in a variable with the mean (or some other statistical measure) of the target variable for that category. This encoding can help capture the relationship between the categorical variable and the target variable, improving the performance of certain machine learning models.
-*** Feature hashing
-Feature hashing, also known as the hashing trick, is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
+** Feature hashing
+Feature hashing [fn:14], also known as the hashing trick, is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
 
 Some real-world examples include:
 
@@ -55,23 +66,25 @@ Some real-world examples include:
 4. Fraud Detection: Feature hashing can be used to convert categorical features related to transactions, user behavior, or device information into numerical representations for fraud detection models. This helps capture patterns and relationships between features, enabling the model to detect fraudulent activities.
 
 #+begin_src python :tangle src/feature-hashing.py :comments link
-from sklearn.feature_extraction import FeatureHasher
+  from sklearn.feature_extraction import FeatureHasher
 
-# Example input data
-data = [{'color': 'red', 'shape': 'circle'},
-        {'color': 'blue', 'shape': 'triangle'},
-        {'color': 'green', 'shape': 'square'}]
+  # Example input data
+  data = [
+      {"color": "red", "shape": "circle"},
+      {"color": "blue", "shape": "triangle"},
+      {"color": "green", "shape": "square"},
+  ]
 
-# Create a FeatureHasher object
-hasher = FeatureHasher(n_features=10, input_type='dict')
+  # Create a FeatureHasher object
+  hasher = FeatureHasher(n_features=20, input_type="dict")
 
-# Transform the data
-hashed_data = hasher.transform(data)
+  # Transform the data
+  hashed_data = hasher.transform(data)
 
-# Print the transformed features
-print(hashed_data.toarray())
+  # Print the transformed features
+  print(hashed_data.toarray())
 #+end_src
-*** Cross feature
+** Cross feature
 In machine learning, a cross feature, also known as an interaction
 feature or interaction term, is a new feature that represents the
 interaction or combination of multiple existing features. It captures
@@ -117,9 +130,9 @@ Note that cross features can help capture non-linear relationships or
 interactions between features, but they can also increase the
 dimensionality of the data, potentially leading to overfitting if not
 used carefully.
-*** Embedding
-**** word2vec
-***** CBOW
+** Embedding
+*** word2vec
+**** CBOW
 Continous Bag of Words (CBOW) is a model used in natural language processing (NLP) to generate word embeddings. It aims to predict a target word based on its context words within a given window size.
 
 Here's an illustration of the CBOW model:
@@ -363,7 +376,7 @@ Using Pytorch, we can do:
 
   print("Predicted word:", predicted_word)
 #+end_src
-***** Skip-gram
+**** Skip-gram
 Skip-gram is a model used in natural language processing (NLP) to generate word embeddings. Unlike the Continuous Bag of Words (CBOW) model, skip-gram aims to predict the context words given a target word.
 
 During training, the model is optimized to maximize the probability of correctly predicting the context words. This is typically done using techniques like negative sampling or hierarchical softmax.
@@ -468,7 +481,7 @@ with torch.no_grad():
 
 print("Predicted word:", predicted_word)
 #+end_src
-**** cotrained
+*** cotrained
 Co-trained embedding, also known as joint embedding or multi-modal embedding, refers to the process of learning a shared representation space for multiple modalities or domains. It involves training an embedding model that can encode and align the information from different modalities, such as text, images, audio, or any other type of data.
 
 The goal of co-trained embedding is to capture the similarities and relationships between different modalities in a common vector space. By doing so, it enables the model to perform various tasks that involve multiple modalities, such as cross-modal retrieval, image captioning, or text-to-image synthesis.
@@ -476,10 +489,10 @@ The goal of co-trained embedding is to capture the similarities and relationship
 The process of co-trained embedding typically involves training a neural network architecture that can handle different types of input data. The network is designed to learn shared latent representations for each modality and optimize them jointly using a specific objective or loss function. This allows the model to align the embeddings of different modalities in a way that similar instances are closer together in the shared space.
 
 Co-trained embedding models have been widely used in various applications, including multimedia information retrieval, cross-modal recommendation systems, and multimodal sentiment analysis. They provide a powerful approach to leverage the complementary information from different modalities, leading to improved performance and richer understanding of the data.
-*** Positional embedding
-*** Data leakage
+** Positional embedding
+** Data leakage
 Data leakage is when information from the target variable or future data unintentionally influences the training process, causing the model to have biased or overly optimistic predictions. It often occurs due to improper data preprocessing, splitting, or feature selection.
-**** Causes
+*** Causes
 1. Temporal Leakage: Using future data in training, like predicting stock prices with data from after the prediction date.
    #+begin_src python :tangle src/data-leakage.py :comments link
      # Temporal leakage
@@ -540,8 +553,8 @@ Data leakage is when information from the target variable or future data uninten
     #+end_src
 4. Group Leakage: Some data are closely related but end up in different train/validation/test groups.
 5. Data generation leakage. Notice the data source and understanding how they are collected and processed.
-**** Feature selection/pruning
-***** Feature importance
+*** Feature selection/pruning
+**** Feature importance
 | Interpretability Technique  | Type               |
 |-----------------------------+--------------------|
 | [[https://interpret.ml/docs/ebm.html][Explainable Boosting]]        | glassbox model     |
@@ -552,19 +565,19 @@ Data leakage is when information from the target variable or future data uninten
 | [[https://interpret.ml/docs/lime.html][LIME]]                        | blackbox explainer |
 | [[https://interpret.ml/docs/msa.html][Morris Sensitivity Analysis]] | blackbox explainer |
 | [[https://interpret.ml/docs/pdp.html][Partial Dependence]]          | blackbox explainer |
-***** Feature generalization
+**** Feature generalization
 Since the goal of an ML model is to make correct predictions on unseen data, features used for the model should generalize to unseen data. Not all features generalize equally. Overall, there are two aspects you might want to consider with regards to generalization: /feature coverage/ and /distribution of feature values./
 - Coverage: A rough rule of thumb is that if this feature appears in a very small percentage of your data, it’s not going to be very generalizable.
 - Distribution: If the set of values that appears in the seen data (such as the train split) has no overlap with the set of values that appears in the unseen data (such as the test split), this feature might even hurt your model’s performance.
-** Model development
-*** Ensembles
-**** bagging
-Given a dataset, instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
+* Model development
+** Ensembles
+*** bagging
+Given a dataset [fn:16], instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
 [[./img/bagging.png]]
-**** boosting
+*** boosting
 Each learner in this ensemble is trained on the same set of samples, but the samples are weighted differently among iterations. As a result, future weak learn‐ ers focus more on the examples that previous weak learners misclassified.
 [[./img/boosting.png]]
-**** stacking
+*** stacking
 Stacking is an ensemble machine learning technique that combines multiple models' predictions using another model, called the meta-model. The base models are trained on the original data, while the meta-model is trained on the base models' predictions, which helps capture patterns and improve overall performance.
 
 #+begin_src python :tangle src/stacking.py :comments link
@@ -616,25 +629,128 @@ Stacking is an ensemble machine learning technique that combines multiple models
   print(f"Recall Score: {recall_score(y_test, final_prediction, average='macro')}")
   print(f"F1 Score: {f1_score(y_test, final_prediction, average='macro')}")
 #+end_src
-**** Experiment tracking and versioning
+*** Experiment tracking and versioning
 It’s important to keep track of all the definitions needed to re-create an experiment and its relevant artifacts. An artifact is a file generated during an experiment—examples of artifacts can be files that show the loss curve, evaluation loss graph, logs, or intermediate results of a model throughout a training process. This enables you to compare different experiments and choose the one best suited for your needs. Comparing different experiments can also help you understand how small changes affect your model’s performance, which, in turn, gives you more visibility into how your model works.
 The process of tracking the progress and results of an experiment is called experiment tracking. The process of logging all the details of an experiment for the purpose of possibly recreating it later or comparing it with other experiments is called versioning. These two go hand in hand with each other. A large part of training an ML model is babysitting the learning processes. Many problems can arise during the training process, including loss not decreasing, overfitting, underfitting, fluctuating weight values, dead neurons, and running out of memory.
 - loss curve
-- model performance metrics: accuracy, F1, recall, perplexity[fn:2] etc.
+- model performance metrics: accuracy, F1, recall, perplexity etc.
+
+  Perplexity is a model performance metric used to evaluate the quality of language models, such as those used for natural language processing tasks. It measures how well the model predicts a given sample, with lower perplexity indicating a better fit. Essentially, it quantifies the average log-probability of the model's predictions, with a lower perplexity value implying a higher probability of predicting the correct words.
+
+#+begin_src python :tangle src/perplexity.py :comments link
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+
+
+    # Create a simple model
+    class SimpleModel(nn.Module):
+        def __init__(self):
+            super(SimpleModel, self).__init__()
+            self.fc = nn.Linear(10, 1)
+
+        def forward(self, x):
+            return self.fc(x)
+
+
+    model = SimpleModel()
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+    # Save a checkpoint
+    torch.save(
+        {
+            "epoch": 5,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "loss": 0.05,
+        },
+        "checkpoint.pth",
+    )
+
+    # Load a checkpoint
+    checkpoint = torch.load("checkpoint.pth")
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    epoch = checkpoint["epoch"]
+    loss = checkpoint["loss"]
+
+    model.train()  # Set the model in train mode
+    # Continue training...
+    #+end_src
+
 - log of corresponding sample, prediction, and ground truth label.
 - speed of your model, evaluated by the number of steps per second or, if your data is text, the number of tokens processed per second.
 - System performance metrics such as memory usage and CPU/GPU utilization.
 - The values over time of any parameter and hyperparameter whose changes can affect your model’s performance, such as the learning rate if you use a learning rate schedule; gradient norms (both globally and per layer) etc.
-*** Distributed Training [fn:3]
-data parallelism
-model parallelism
-pipeline parallelism
-hybrid parallelism
-*** Offline Evaluation
-**** Metrics
+** Distributed Training
+Some directions based on [cite:@nagrecha2023systems] include rematerialization[cite:@checkpointing2016], data spilling/CPU offloading [cite:@zero2019; @zero2021; @hydra2021; @mpms2021; @swapadvisor2021; @l2l2020], pipeline/model parallelism[cite:@gpipe2018; @pipedream2018; @terapipe2021; @torchgpipe2020; @megatronlmgpuscaling2021], and hybrid parallelism[cite:@flexflow2018; @alpa2022; @hydra2021; @mpms2021; @gshard2020]. These subjects, falling under the general umbrella of "large-model training techniques", has become a key focus for researchers across industry and academia, but the sheer volume of work in the space has made this topic difficult to navigate. This paper will provide a comprehensive review of the current state of the large-model DL training systems space, along with an assessment of future directions of growth and development in the area.
+*** Rematerialization
+*** Architecture parallelism
+- data parallelism [fn:3]
+- model parallelism
+- pipeline parallelism
+- hybrid parallelism
+- Checkpointing
+
+  Checkpointing in machine learning refers to the practice of periodically saving the state of a model during its training process. It usually involves storing the model's weights and other relevant information, such as optimizer state and training progress (i.e., the current epoch or iteration). Checkpointing serves several purposes:
+
+  1. **Fault tolerance**: Training deep learning models can be a time-consuming and computationally expensive process. If the training process is interrupted due to hardware failure, software crash, or other issues, checkpointing allows you to resume training from the last saved state, avoiding the need to restart from scratch.
+
+  2. **Early stopping**: Checkpointing enables you to monitor the model's performance on a validation set during training. If the validation performance starts degrading (indicating overfitting), you can stop the training early and revert to the best-performing checkpoint.
+
+  3. **Model selection**: By saving checkpoints at different stages of the training process, you can evaluate and compare multiple versions of the model on a test set or based on various performance metrics. This allows you to select the best-performing model for deployment or further fine-tuning.
+
+  4. **Resource management**: For long-running training processes or when using limited computational resources, checkpointing allows you to pause and resume training at your convenience. You can free up resources when needed and resume training when resources become available again.
+
+  In deep learning frameworks like TensorFlow and PyTorch, you can implement checkpointing using built-in utilities for saving and loading model states. Here's a simple example of checkpointing using PyTorch:
+    #+begin_src python :tangle src/basic-checkpointing.py :comments link
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+
+
+      # Create a simple model
+      class SimpleModel(nn.Module):
+          def __init__(self):
+              super(SimpleModel, self).__init__()
+              self.fc = nn.Linear(10, 1)
+
+          def forward(self, x):
+              return self.fc(x)
+
+
+      model = SimpleModel()
+      optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+      # Save a checkpoint
+      torch.save(
+          {
+              "epoch": 10,
+              "model_state_dict": model.state_dict(),
+              "optimizer_state_dict": optimizer.state_dict(),
+              "loss": 0.1,
+          },
+          "checkpoint.pth",
+      )
+
+      # Load a checkpoint
+      checkpoint = torch.load("checkpoint.pth")
+      model.load_state_dict(checkpoint["model_state_dict"])
+      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+      epoch = checkpoint["epoch"]
+      loss = checkpoint["loss"]
+
+      model.train()  # Set the model in train mode
+      # Continue training...
+    #+end_src
+*** Data Spilling/CPU offloading across the memory hierarchy
+*** Memory efficient data representations
+** Offline Evaluation
+*** Metrics
 - Precision
 - Recall
 - F1
+- Asymmetric metrics:
   F1, precision, and recall are asymmetric metrics because they don't treat false positives and false negatives equally. Precision focuses on the proportion of true positives among predicted positives, while recall focuses on the proportion of true positives among actual positives. F1 score is the harmonic mean of precision and recall, balancing the two metrics. As a result, they emphasize different aspects of a model's performance.
 
   #+begin_src python :tangle src/evaluation-metrics.py :comments link
@@ -646,7 +762,7 @@ hybrid parallelism
     # Generate synthetic binary classification data
     X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
+      - X, y, test_size=0.2, random_state=42
     )
 
     # Train a classifier
@@ -689,105 +805,314 @@ hybrid parallelism
     print(f"F1 Score: {f1_modified}")
   #+end_src
 
-Asymmetric metrics like precision, recall, and F1 score treat false positives and false negatives differently due to their distinct formulas. To understand their asymmetry and effects, let's break down each metric:
+    Asymmetric metrics like precision, recall, and F1 score treat false positives and false negatives differently due to their distinct formulas. To understand their asymmetry and effects, let's break down each metric:
 
-1. Precision: (True Positives) / (True Positives + False Positives)
-   - High precision means fewer false positives.
-   - If precision is low, the model incorrectly classifies many negative instances as positive.
+    1. Precision: (True Positives) / (True Positives + False Positives)
+    - High precision means fewer false positives.
+    - If precision is low, the model incorrectly classifies many negative instances as positive.
 
-2. Recall: (True Positives) / (True Positives + False Negatives)
-   - High recall means fewer false negatives.
-   - If recall is low, the model misses many positive instances, classifying them as negative.
+    2. Recall: (True Positives) / (True Positives + False Negatives)
+    - High recall means fewer false negatives.
+    - If recall is low, the model misses many positive instances, classifying them as negative.
 
-3. F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
-   - Balances precision and recall, considering both false positives and false negatives.
+    3. F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
+    - Balances precision and recall, considering both false positives and false negatives.
 
-The asymmetry of these metrics can be observed in situations where one metric is high while the other is low. For example, a model with high precision but low recall is good at avoiding false positives but misses many actual positive instances. Conversely, a model with high recall but low precision correctly identifies most positive instances but generates many false positives.
+    - The asymmetry of these metrics can be observed in situations where one metric is high while the other is low. For example, a model with high precision but low recall is good at avoiding false positives but misses many actual positive instances. Conversely, a model with high recall but low precision correctly identifies most positive instances but generates many false positives.
 
-Understanding these asymmetries helps you choose an appropriate metric based on your specific problem or application's requirements. For instance, in a medical diagnosis system, you might prioritize high recall to avoid missing positive cases, even if it means more false positives. Conversely, in a spam detection system, you might focus on high precision to reduce false positives, ensuring that legitimate emails don't end up in the spam folder.
-
-**** Baselines
-***** Evaluation metrics, by themselves, mean little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
+    - Understanding these asymmetries helps you choose an appropriate metric based on your specific problem or application's requirements. For instance, in a medical diagnosis system, you might prioritize high recall to avoid missing positive cases, even if it means more false positives. Conversely, in a spam detection system, you might focus on high precision to reduce false positives, ensuring that legitimate emails don't end up in the spam folder.
+*** Baselines
+**** Evaluation metrics, by themselves, mean little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
 - random baseline
 - simple heuristic baseline
 - zero rule baseline
-  A special case of the simple heuristic baseline when your baseline model always predicts the most common class
+  - A special case of the simple heuristic baseline when your baseline model always predicts the most common class
 - human baseline
 - existing solutions
-**** Methods
-***** perturbation tests
-The more sensitive your model is to noise, the harder it will be to maintain it.
-***** invariance tests
-Excluding sensitive information or adding/removing/changing irrelavant dimensions should not affect the predictions.
-***** directional expectation tests
-Models with changed data in dimensions should not generate predictions with directions against common sense.
-***** model calibration
-If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
-
-To measure a model’s calibration, a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
-
-To calibrate your models, a common method is Platt scaling, which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
-***** confidence measurement
-If you only want to show the predictions that your model is certain about, how do you measure that certainty?
-***** slice-based evaluation
-Slicing means to separate your data into subsets and look at your model’s performance on each subset separately.
+*** Methods
+**** perturbation tests
+- The more sensitive your model is to noise, the harder it will be to maintain it.
+**** invariance tests
+- Excluding sensitive information or adding/removing/changing irrelavant dimensions should not affect the predictions.
+**** directional expectation tests
+- Models with changed data in dimensions should not generate predictions with directions against common sense.
+**** model calibration
+- If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
+- To measure a model’s calibration [fn:11], a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
+- To calibrate your models, a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
+**** confidence measurement
+- If you only want to show the predictions that your model is certain about, how do you measure that certainty?
+**** slice-based evaluation
+- Slicing means to separate your data into subsets and look at your model’s performance on each subset separately.
 
 - heuristics-based
 - error analysis
 - slice finder
-*** Model Architecture
-**** [[file:papers/Wide & Deep Learning for Recommender Systems.pdf][Wide and Deep Architecture]]
-***** Architecture
-[[file:./img/wide-and-deep-architecture.png]]
-***** [[https://paperswithcode.com/paper/wide-deep-learning-for-recommender-systems#code][Paperwithcode]]
-**** [[file:papers/youtube-multitask.pdf][Two-tower architecture]]
-[[file:./img/two-tower.png]]
-**** [[https://arxiv.org/pdf/2008.13535.pdf][Deep cross network]]
-**** [[https://daiwk.github.io/assets/youtube-multitask.pdf][Multitask learning]]
-**** [[https://arxiv.org/abs/1906.00091][Facebook DLRM]]
-*** Experiment
-**** A/B testing
-**** Bayesian optimization
-** Deployment
+** Model Architecture
+*** [[file:papers/Wide & Deep Learning for Recommender Systems.pdf][Wide and Deep Architecture]]
+**** Architecture
+- [[file:./img/wide-and-deep-architecture.png]]
+**** [[https://paperswithcode.com/paper/wide-deep-learning-for-recommender-systems#code][Paperwithcode]]
+*** [[file:papers/youtube-multitask.pdf][Two-tower architecture]]
+- [[file:./img/two-tower.png]]
+*** [[https://arxiv.org/pdf/2008.13535.pdf][Deep cross network]]
+*** [[https://daiwk.github.io/assets/youtube-multitask.pdf][Multitask learning]]
+*** [[https://arxiv.org/abs/1906.00091][Facebook DLRM]]
+*** [[https://www.pytorchlightning.ai/index.html][Pytorch lightning]]
+** Experiment
+*** A/B testing
+*** Bayesian optimization
+* Deployment
+- ...deploying is easy if you ignore all the hard parts. If you want to deploy a model for your friends to play with, all you have to do is to wrap your predict function in a POST request endpoint using Flask or FastAPI, put the dependencies this predict function needs to run in a container,2 and push your model and its associated container to a cloud service like AWS or GCP to expose the endpoint:
+    #+begin_src python
+    # Example of how to use FastAPI to turn your predict function # into a POST endpoint
+    @app.route("/predict", methods=["POST"])
+    def predict():
+        X = request.get_json()["X"]
+        y = MODEL.predict(X).tolist()
+        return json.dumps({"y": y}), 200
+    #+end_src
+- Hard parts:
+- Latency
+- Throughput
+- Uptime
+- Logginga and monitoring
+- MLOps
+** Unification of batch, online and stream processing
+Ref [fn:17]
+* Finetuning
+  Fine-tuning [fn:6], especially in the context of modern deep learning models, refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
+
+  Fine-tuning typically involves the following steps:
+
+  1. Select a pre-trained model: Choose a model that has been trained on a large-scale dataset, usually in a similar domain or with similar characteristics to the target task. Examples of pre-trained models include BERT for natural language processing, ResNet for image classification, and Mask R-CNN for object detection and segmentation.
+
+  2. Modify the model architecture: Adjust the model's architecture to fit the target task's requirements. This often involves replacing or modifying the last layers of the model, such as the classification or regression layers, to match the desired output dimensions or classes.
+
+  3. Initialize with pre-trained weights: Load the pre-trained weights into the modified model, ensuring that the new layers are initialized with random weights or suitable initialization schemes.
+
+  4. Fine-tune the model: Train the modified model on the target dataset, usually with a lower learning rate compared to training from scratch. This is to prevent the model from unlearning the useful features learned during pre-training. You can choose to update all the model's weights or only the weights of the newly added layers, depending on the similarity of the target task to the pre-training task and the available computational resources.
+
+  Here's an example of fine-tuning a pre-trained ResNet-18 model for a new image classification task using PyTorch:
+
+  #+begin_src python :tangle src/basic-finetuning.py :comments link
+    import torch
+    import torch.nn as nn
+    import torchvision.models as models
+    import torchvision.datasets as datasets
+    import torchvision.transforms as transforms
+
+    # Load a pre-trained ResNet-18 model
+    resnet18 = models.resnet18(pretrained=True)
+
+    # Modify the model architecture for the new task
+    num_classes = 100  # Number of target classes
+    resnet18.fc = nn.Linear(resnet18.fc.in_features, num_classes)
+
+    # Load the target dataset
+    transform = transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+
+    train_dataset = datasets.ImageFolder("path/to/train_data", transform=transform)
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=32, shuffle=True, num_workers=4
+    )
+
+    # Set up the loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(resnet18.parameters(), lr=0.001, momentum=0.9)
+
+    # Fine-tune the model
+    num_epochs = 10
+    resnet18.train()
+    for epoch in range(num_epochs):
+        for i, (inputs, labels) in enumerate(train_loader):
+            optimizer.zero_grad()
+            outputs = resnet18(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+  #+end_src
+
+** Model compression
+...three main approaches to reduce its inference latency: make it do inference faster, make the model smaller, or make the hardware it’s deployed on run faster. The process of making a model smaller is called model compression, and the process to make it do inference faster is called inference optimization.
+
+- Low-Rank Factorization: [fn:7] the key idea behind low-rank factorization is to replace high-dimensional tensors with lower-dimensional tensors. A Example: compact convolutional filters: where the over-parameterized (having too many parameters) convolution filters are replaced with compact blocks to both reduce the number of parameters and increase speed.
+
+- Knowledge distillation: a method in which a small model (student) is trained to mimic a larger model or ensemble of models (teacher). The smaller model is what you’ll deploy.
+
+- Pruning: a method originally used for decision trees where you remove sections of a tree that are uncritical and redundant for classification.25 As neural networks gained wider adoption, people started to realize that neural networks are over-parameterized and began to find ways to reduce the workload caused by the extra parameters. One is to remove entire nodes of a neural network, which means changing its architecture and reducing its number of parameters. The more common meaning is to find parameters least useful to predictions and set them to 0. In this case, pruning doesn’t reduce the total number of parameters, only the number of nonzero parameters. The architecture of the neural network remains the same. This helps with reducing the size of a model because pruning makes a neural network more sparse, and sparse architecture tends to require less storage space than dense structure.
+
+- Quantization: the most general and commonly used model compression method. Quantization reduces a model’s size by using fewer bits to represent its parameters. [fn:4]
+
+- Dynamic shape input: in deep learning, dynamic shape input refers to the ability of a neural network to handle input data with varying shapes or dimensions during the training and inference process. Traditional neural networks typically require fixed-size inputs, meaning the input data must be reshaped or preprocessed to fit the expected dimensions before being fed to the network.
+
+  - Dynamic shape input is useful when dealing with data like images, text, or time-series data, where the dimensions can vary significantly. For example, when processing images, you might encounter images with different aspect ratios, sizes, or channels. Similarly, in text processing, the length of sentences or documents can also differ significantly.
+
+  - To handle dynamic shape inputs, modern deep learning frameworks like TensorFlow and PyTorch provide mechanisms to support variable-sized input data. These mechanisms include:
+
+  1. Dynamic computation graph: Unlike their static counterparts, dynamic computation graphs can be constructed on-the-fly during runtime, allowing for input data with varying shapes to be handled more easily.
+
+  2. Padding and masking: Padding is a technique to resize inputs to a fixed shape by adding extra elements (like zeros), while masking is used to ignore the padded elements during the computation process. This is particularly useful for handling sequences with varying lengths, such as sentences or time-series data.
+
+  3. Tensor reshaping and broadcasting: Deep learning frameworks provide functions to reshape and broadcast tensors, making it possible to manipulate input data with varying shapes more easily.
+
+  - By incorporating dynamic shape input support into a deep learning model, you can create more flexible and adaptable models that can handle real-world data with varying dimensions.
+
+  1. Handling variable-length sequences with padding and masking:
+
+     #+begin_src python
+       import torch
+       import torch.nn as nn
+
+
+       # Create a simple RNN model
+       class SimpleRNN(nn.Module):
+           def __init__(self, input_size, hidden_size, num_layers):
+               super(SimpleRNN, self).__init__()
+               self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+
+           def forward(self, x, lengths):
+               # Pack padded sequence
+               x_packed = nn.utils.rnn.pack_padded_sequence(
+                   x, lengths, batch_first=True, enforce_sorted=False
+               )
+
+               # Forward pass through RNN
+               out_packed, _ = self.rnn(x_packed)
+
+               # Unpack packed sequence
+               out, _ = nn.utils.rnn.pad_packed_sequence(out_packed, batch_first=True)
+               return out
+
+
+       # Input data (batch_size=2, variable sequence_length, input_size=3)
+       x1 = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+
+       x2 = torch.tensor([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0]])
+
+       # Pad sequences to the same length
+       x_padded = nn.utils.rnn.pad_sequence([x1, x2], batch_first=True)
+       lengths = [x1.size(0), x2.size(0)]
+
+       # Create the RNN model
+       input_size = 3
+       hidden_size = 5
+       num_layers = 1
+       model = SimpleRNN(input_size, hidden_size, num_layers)
+
+       # Forward pass
+       output = model(x_padded, lengths)
+       print(output)
+     #+end_src
+
+  2. Handling variable-sized images with adaptive pooling:
+
+     #+begin_src python
+       import torch
+       import torch.nn as nn
+
+
+       # Create a simple CNN model with adaptive pooling
+       class SimpleCNN(nn.Module):
+           def __init__(self, num_classes):
+               super(SimpleCNN, self).__init__()
+               self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+               self.pool = nn.MaxPool2d(2, 2)
+               self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+               self.adaptive_pool = nn.AdaptiveAvgPool2d((1, 1))
+               self.fc = nn.Linear(32, num_classes)
+
+           def forward(self, x):
+               x = self.pool(F.relu(self.conv1(x)))
+               x = self.pool(F.relu(self.conv2(x)))
+               x = self.adaptive_pool(x)
+               x = torch.flatten(x, 1)
+               x = self.fc(x)
+               return x
+
+
+       # Input data (variable-sized images with 3 channels)
+       image1 = torch.randn(3, 64, 64)  # 64x64 image
+       image2 = torch.randn(3, 128, 128)  # 128x128 image
+       image3 = torch.randn(3, 96, 48)  # 96x48 image
+
+       images = [image1.unsqueeze(0), image2.unsqueeze(0), image3.unsqueeze(0)]
+
+       # Create the CNN model
+       num_classes = 10
+       model = SimpleCNN(num_classes)
+
+       # Forward pass for each image
+       for image in images:
+           output = model(image)
+           print(output)
+     #+end_src
+
+  - In these examples, we demonstrate how to handle dynamic shape input for sequences with variable lengths and images with different sizes using PyTorch. The first example employs padding and masking to handle variable-length sequences in an RNN model, while the second example uses adaptive pooling to handle variable-sized images in a CNN model.
+
+- Caching [fn:9]
+
+** Repurposing
+- Knowledge injection [fn:5]
+- Adapter modules
 
 * Footnotes
-
-[fn:3] Source: Kabir Nagrecha, Systems for Parallel and Distributed Large-Model Deep Learning Training
-[fn:2] Perplexity is a model performance metric used to evaluate the quality of language models, such as those used for natural language processing tasks. It measures how well the model predicts a given sample, with lower perplexity indicating a better fit. Essentially, it quantifies the average log-probability of the model's predictions, with a lower perplexity value implying a higher probability of predicting the correct words.
-#+begin_src python :tangle src/perplexity.py :comments link
-  import nltk
-  from nltk.lm.preprocessing import padded_everygram_pipeline
-  from nltk.lm import MLE
-  from nltk.tokenize import word_tokenize, sent_tokenize
-  from math import exp
-
-  # Sample text
-  text = "This is a sample text. We use it to demonstrate perplexity calculation."
-
-  # Tokenize and preprocess
-  sentences = sent_tokenize(text)
-  tokenized_text = [word_tokenize(sent) for sent in sentences]
-  n = 3  # Trigram model
-  train_data, padded_sents = padded_everygram_pipeline(n, tokenized_text)
-
-  # Train language model
-  model = MLE(n)
-  model.fit(train_data, padded_sents)
-
-  # Test sentence
-  test_sentence = "This is a test sentence."
-  tokenized_test_sentence = word_tokenize(test_sentence)
-
-  # Calculate perplexity
-  test_ngrams = list(nltk.ngrams(tokenized_test_sentence, n))
-  log_prob = 0
-
-  for ngram in test_ngrams:
-      if model.score(ngram[:-1], ngram[-1]) > 0:
-          log_prob += -1 * model.logscore(ngram[-1], ngram[:-1])
-
-  perplexity = exp(log_prob / len(test_ngrams))
-  print(f"Perplexity: {perplexity}")
-#+end_src
-
-[fn:1] Chip Huyen, Designing Machine Learning Systems, p.138
+[fn:17]
+https://arxiv.org/abs/2208.09827
+https://arxiv.org/abs/1403.3375
+[fn:16]
+https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning
+https://huggingface.co/docs/transformers/v4.18.0/en/performance
+[fn:15]
+https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions
+- [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
+[fn:14]
+https://booking.ai/dont-be-tricked-by-the-hashing-trick-192a6aae3087
+https://scikit-learn.org/stable/modules/feature_extraction.html#feature-hashing
+https://web.archive.org/web/20120609232923/http://metaoptimize.com/qa/questions/6943/what-is-the-hashing-trick
+https://arxiv.org/abs/2006.10739
+[fn:13] http://web.stanford.edu/class/cs246/
+[fn:12] https://stanford-cs329s.github.io/syllabus.html
+[fn:11]
+https://huggingface.co/spaces/merve/uncertainty-calibration
+https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration
+https://www.kaggle.com/code/naiborhujosua/model-calibration
+https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html
+https://github.com/gpleiss/temperature_scaling
+[fn:9]
+https://www.youtube.com/watch?v=Nw77sEAn_Js https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26
+[fn:7]
+https://arxiv.org/abs/2106.09685
+[fn:6]
+https://www.youtube.com/watch?v=YVU5wAA6Txo
+[[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]]
+https://www.youtube.com/watch?v=TPcXVJ1VSRI
+https://github.com/huggingface/peft
+https://www.youtube.com/playlist?list=PLJV_el3uVTsOK_ZK5L0Iv_EQoL1JefRL4
+[fn:5]
+[[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
+[[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
+[fn:4]
+Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as "fixed point."
+https://huggingface.co/docs/optimum/concept_guides/quantization
+https://arxiv.org/abs/1906.00532
+- [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
+https://www.youtube.com/watch?v=IPQmGzYuxmc
+https://www.youtube.com/watch?v=c3MT2qV5f9w
+https://www.kaggle.com/code/anilkrsah/model-quantization
+https://www.kaggle.com/code/ritvik1909/model-quantization
+[fn:3]
+https://github.com/cybertronai/gradient-checkpointing
+[[https://web.stanford.edu/~rezab/classes/cme323/S20/][DAO: Distributed Algorithms and Optimization]]
+[fn:1]
+Chip Huyen, Designing Machine Learning Systems, p.138
+* Bibliography
+#+CITE_EXPORT: csl /Users/toeinriver/Desktop/ml-system-design/csl/ieee.csl
+#+print_bibliography:

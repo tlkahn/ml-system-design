@@ -2,3 +2,6 @@ books
 papers
 tmp
 **/*.trash.*
+README.tex
+README.pdf
+bib

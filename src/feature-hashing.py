@@ -2,12 +2,14 @@
 from sklearn.feature_extraction import FeatureHasher
 
 # Example input data
-data = [{'color': 'red', 'shape': 'circle'},
-        {'color': 'blue', 'shape': 'triangle'},
-        {'color': 'green', 'shape': 'square'}]
+data = [
+    {"color": "red", "shape": "circle"},
+    {"color": "blue", "shape": "triangle"},
+    {"color": "green", "shape": "square"},
+]
 
 # Create a FeatureHasher object
-hasher = FeatureHasher(n_features=10, input_type='dict')
+hasher = FeatureHasher(n_features=20, input_type="dict")
 
 # Transform the data
 hashed_data = hasher.transform(data)
