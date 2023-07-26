@@ -1,0 +1,341 @@
+* PyTorch Cheat Sheet
+:PROPERTIES:
+:CUSTOM_ID: pytorch-cheat-sheet
+:END:
+** Imports
+:PROPERTIES:
+:CUSTOM_ID: imports
+:END:
+*** General
+:PROPERTIES:
+:CUSTOM_ID: general
+:END:
+#+name: codecell0
+#+begin_example
+import torch                                        # root package
+from torch.utils.data import Dataset, DataLoader    # dataset representation and loading
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+*** Neural Network API
+:PROPERTIES:
+:CUSTOM_ID: neural-network-api
+:END:
+#+name: codecell1
+#+begin_example
+import torch.autograd as autograd         # computation graph
+from torch import Tensor                  # tensor node in the computation graph
+import torch.nn as nn                     # neural networks
+import torch.nn.functional as F           # layers, activations and more
+import torch.optim as optim               # optimizers e.g. gradient descent, ADAM, etc.
+from torch.jit import script, trace       # hybrid frontend decorator and tracing jit
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/autograd.html][autograd]], [[https://pytorch.org/docs/stable/nn.html][nn]], [[https://pytorch.org/docs/stable/nn.html#torch-nn-functional][functional]] and [[https://pytorch.org/docs/stable/optim.html][optim]]
+
+*** Torchscript and JIT
+:PROPERTIES:
+:CUSTOM_ID: torchscript-and-jit
+:END:
+#+name: codecell2
+#+begin_example
+torch.jit.trace()         # takes your module or function and an example
+                          # data input, and traces the computational steps
+                          # that the data encounters as it progresses through the model
+
+@script                   # decorator used to indicate data-dependent
+                          # control flow within the code being traced
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/jit.html][Torchscript]]
+
+*** ONNX
+:PROPERTIES:
+:CUSTOM_ID: onnx
+:END:
+#+name: codecell3
+#+begin_example
+torch.onnx.export(model, dummy data, xxxx.proto)       # exports an ONNX formatted
+                                                       # model using a trained model, dummy
+                                                       # data and the desired file name
+
+model = onnx.load("alexnet.proto")                     # load an ONNX model
+onnx.checker.check_model(model)                        # check that the model
+                                                       # IR is well formed
+
+onnx.helper.printable_graph(model.graph)               # print a human readable
+                                                       # representation of the graph
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/onnx.html][onnx]]
+
+*** Vision
+:PROPERTIES:
+:CUSTOM_ID: vision
+:END:
+#+name: codecell4
+#+begin_example
+from torchvision import datasets, models, transforms     # vision datasets,
+                                                         # architectures &
+                                                         # transforms
+
+import torchvision.transforms as transforms              # composable transforms
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/vision/stable/index.html][torchvision]]
+
+*** Distributed Training
+:PROPERTIES:
+:CUSTOM_ID: distributed-training
+:END:
+#+name: codecell5
+#+begin_example
+import torch.distributed as dist             # distributed communication
+from torch.multiprocessing import Process    # memory sharing processes
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/distributed.html][distributed]] and [[https://pytorch.org/docs/stable/multiprocessing.html][multiprocessing]]
+
+** Tensors
+:PROPERTIES:
+:CUSTOM_ID: tensors
+:END:
+*** Creation
+:PROPERTIES:
+:CUSTOM_ID: creation
+:END:
+#+name: codecell6
+#+begin_example
+x = torch.randn(*size)              # tensor with independent N(0,1) entries
+x = torch.[ones|zeros](*size)       # tensor with all 1's [or 0's]
+x = torch.tensor(L)                 # create tensor from [nested] list or ndarray L
+y = x.clone()                       # clone of x
+with torch.no_grad():               # code wrap that stops autograd from tracking tensor history
+requires_grad=True                  # arg, when set to True, tracks computation
+                                    # history for future derivative calculations
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/tensors.html][tensor]]
+
+*** Dimensionality
+:PROPERTIES:
+:CUSTOM_ID: dimensionality
+:END:
+#+name: codecell7
+#+begin_example
+x.size()                                  # return tuple-like object of dimensions
+x = torch.cat(tensor_seq, dim=0)          # concatenates tensors along dim
+y = x.view(a,b,...)                       # reshapes x into size (a,b,...)
+y = x.view(-1,a)                          # reshapes x into size (b,a) for some b
+y = x.transpose(a,b)                      # swaps dimensions a and b
+y = x.permute(*dims)                      # permutes dimensions
+y = x.unsqueeze(dim)                      # tensor with added axis
+y = x.unsqueeze(dim=2)                    # (a,b,c) tensor -> (a,b,1,c) tensor
+y = x.squeeze()                           # removes all dimensions of size 1 (a,1,b,1) -> (a,b)
+y = x.squeeze(dim=1)                      # removes specified dimension of size 1 (a,1,b,1) -> (a,b,1)
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/tensors.html][tensor]]
+
+*** Algebra
+:PROPERTIES:
+:CUSTOM_ID: algebra
+:END:
+#+name: codecell8
+#+begin_example
+ret = A.mm(B)       # matrix multiplication
+ret = A.mv(x)       # matrix-vector multiplication
+x = x.t()           # matrix transpose
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/torch.html?highlight=mm#math-operations][math operations]]
+
+*** GPU Usage
+:PROPERTIES:
+:CUSTOM_ID: gpu-usage
+:END:
+#+name: codecell9
+#+begin_example
+torch.cuda.is_available                                     # check for cuda
+x = x.cuda()                                                # move x's data from
+                                                            # CPU to GPU and return new object
+
+x = x.cpu()                                                 # move x's data from GPU to CPU
+                                                            # and return new object
+
+if not args.disable_cuda and torch.cuda.is_available():     # device agnostic code
+    args.device = torch.device('cuda')                      # and modularity
+else:                                                       #
+    args.device = torch.device('cpu')                       #
+
+net.to(device)                                              # recursively convert their
+                                                            # parameters and buffers to
+                                                            # device specific tensors
+
+x = x.to(device)                                            # copy your tensors to a device
+                                                            # (gpu, cpu)
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/cuda.html][cuda]]
+
+** Deep Learning
+:PROPERTIES:
+:CUSTOM_ID: deep-learning
+:END:
+#+name: codecell10
+#+begin_example
+nn.Linear(m,n)                                # fully connected layer from
+                                              # m to n units
+
+nn.ConvXd(m,n,s)                              # X dimensional conv layer from
+                                              # m to n channels where X⍷{1,2,3}
+                                              # and the kernel size is s
+
+nn.MaxPoolXd(s)                               # X dimension pooling layer
+                                              # (notation as above)
+
+nn.BatchNormXd                                # batch norm layer
+nn.RNN/LSTM/GRU                               # recurrent layers
+nn.Dropout(p=0.5, inplace=False)              # dropout layer for any dimensional input
+nn.Dropout2d(p=0.5, inplace=False)            # 2-dimensional channel-wise dropout
+nn.Embedding(num_embeddings, embedding_dim)   # (tensor-wise) mapping from
+                                              # indices to embedding vectors
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/nn.html][nn]]
+
+*** Loss Functions
+:PROPERTIES:
+:CUSTOM_ID: loss-functions
+:END:
+#+name: codecell11
+#+begin_example
+nn.X                                  # where X is L1Loss, MSELoss, CrossEntropyLoss
+                                      # CTCLoss, NLLLoss, PoissonNLLLoss,
+                                      # KLDivLoss, BCELoss, BCEWithLogitsLoss,
+                                      # MarginRankingLoss, HingeEmbeddingLoss,
+                                      # MultiLabelMarginLoss, SmoothL1Loss,
+                                      # SoftMarginLoss, MultiLabelSoftMarginLoss,
+                                      # CosineEmbeddingLoss, MultiMarginLoss,
+                                      # or TripletMarginLoss
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/nn.html#loss-functions][loss functions]]
+
+*** Activation Functions
+:PROPERTIES:
+:CUSTOM_ID: activation-functions
+:END:
+#+name: codecell12
+#+begin_example
+nn.X                                  # where X is ReLU, ReLU6, ELU, SELU, PReLU, LeakyReLU,
+                                      # RReLu, CELU, GELU, Threshold, Hardshrink, HardTanh,
+                                      # Sigmoid, LogSigmoid, Softplus, SoftShrink,
+                                      # Softsign, Tanh, TanhShrink, Softmin, Softmax,
+                                      # Softmax2d, LogSoftmax or AdaptiveSoftmaxWithLoss
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/nn.html#non-linear-activations-weighted-sum-nonlinearity][activation functions]]
+
+*** Optimizers
+:PROPERTIES:
+:CUSTOM_ID: optimizers
+:END:
+#+name: codecell13
+#+begin_example
+opt = optim.x(model.parameters(), ...)      # create optimizer
+opt.step()                                  # update weights
+optim.X                                     # where X is SGD, Adadelta, Adagrad, Adam,
+                                            # AdamW, SparseAdam, Adamax, ASGD,
+                                            # LBFGS, RMSprop or Rprop
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/optim.html][optimizers]]
+
+*** Learning rate scheduling
+:PROPERTIES:
+:CUSTOM_ID: learning-rate-scheduling
+:END:
+#+name: codecell14
+#+begin_example
+scheduler = optim.X(optimizer,...)      # create lr scheduler
+scheduler.step()                        # update lr after optimizer updates weights
+optim.lr_scheduler.X                    # where X is LambdaLR, MultiplicativeLR,
+                                        # StepLR, MultiStepLR, ExponentialLR,
+                                        # CosineAnnealingLR, ReduceLROnPlateau, CyclicLR,
+                                        # OneCycleLR, CosineAnnealingWarmRestarts,
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate][learning rate scheduler]]
+
+** Data Utilities
+:PROPERTIES:
+:CUSTOM_ID: data-utilities
+:END:
+*** Datasets
+:PROPERTIES:
+:CUSTOM_ID: datasets
+:END:
+#+name: codecell15
+#+begin_example
+Dataset                    # abstract class representing dataset
+TensorDataset              # labelled dataset in the form of tensors
+Concat Dataset             # concatenation of Datasets
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/data.html?highlight=dataset#torch.utils.data.Dataset][datasets]]
+
+*** Dataloaders and DataSamplers
+:PROPERTIES:
+:CUSTOM_ID: dataloaders-and-datasamplers
+:END:
+#+name: codecell16
+#+begin_example
+DataLoader(dataset, batch_size=1, ...)      # loads data batches agnostic
+                                            # of structure of individual data points
+
+sampler.Sampler(dataset,...)                # abstract class dealing with
+                                            # ways to sample from dataset
+
+sampler.XSampler where ...                  # Sequential, Random, SubsetRandom,
+                                            # WeightedRandom, Batch, Distributed
+#+end_example
+
+[[file:///Users/toeinriver/Documents/org/clips/WebImg/1b236a93097c1ab60aac7498a0688739ca3610c09cea8a9bff057f8a1cd2728f.svg]]
+
+See [[https://pytorch.org/docs/stable/data.html?highlight=dataloader#torch.utils.data.DataLoader][dataloader]]
+
+--------------
+
+https://pytorch.org/tutorials/beginner/ptcheat.html

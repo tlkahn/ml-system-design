@@ -1,3 +1,4 @@
+# [[file:../README.org::*CBOW][CBOW:1]]
 import numpy as np
 
 # Sample input data
@@ -96,3 +97,4 @@ predicted_word_index = np.argmax(softmax_output, axis=1)
 predicted_word = [list(vocab)[idx] for idx in predicted_word_index]
 
 print("Predicted word:", predicted_word)
+# CBOW:1 ends here

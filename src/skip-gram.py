@@ -1,3 +1,4 @@
+# [[file:../README.org::*Skip-gram][Skip-gram:1]]
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -97,3 +98,4 @@ with torch.no_grad():
     predicted_word = vocab[predicted_word_index]
 
 print("Predicted word:", predicted_word)
+# Skip-gram:1 ends here

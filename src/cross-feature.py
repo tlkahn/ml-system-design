@@ -1,3 +1,4 @@
+# [[file:../README.org::*Cross feature][Cross feature:1]]
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 
@@ -15,3 +16,4 @@ X_cross = poly.fit_transform(X)
 reg = LinearRegression()
 reg.fit(X_cross, y)  # y represents the target variable
 reg.coef_
+# Cross feature:1 ends here

@@ -1,3 +1,4 @@
+# [[file:../README.org::*CBOW][CBOW:2]]
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -29,7 +30,7 @@ for sentence in data:
         for j in range(i - window_size, i + window_size + 1):
             if j != i and 0 <= j < len(sentence):
                 context_words.append(word_to_index[sentence[j]])
-        training_data.append((context_words, word_to_index[target_word]))
+                training_data.append((context_words, word_to_index[target_word]))
 
 
 class CBOWDataset(Dataset):
@@ -101,7 +102,7 @@ for i, target_word in enumerate(test_sentence):
     for j in range(i - window_size, i + window_size + 1):
         if j != i and 0 <= j < len(test_sentence):
             context_words.append(word_to_index[test_sentence[j]])
-    context.append(context_words)
+            context.append(context_words)
 
 model.eval()
 
@@ -112,3 +113,4 @@ with torch.no_grad():
     predicted_word = vocab[predicted_word_index]
 
 print("Predicted word:", predicted_word)
+# CBOW:2 ends here

@@ -1,10 +1,15 @@
-** ML Primer
-*** Feature selection/engineering
-**** One-hot encoding
-***** Common problems
+* ML System Design Primer
+** Scope and frame the question
+*** Loss function and metrics evaluations
+** Data engineering
+*** Sampling
+*** Training pipeline
+** Feature selection/engineering
+*** One-hot encoding
+**** Common problems
 - Not work well with tree-based modesl: decision trees, random forests, etc.
   One-hot encoding can lead to high-dimensional sparse feature representations, which can negatively impact the performance of tree-based models. These models rely on splitting features based on thresholds, and high dimensionality can lead to inefficient splits and slower training. Additionally, tree-based models can handle categorical variables directly without one-hot encoding.
-  #+begin_src python :tangle src/one-hot.py
+  #+begin_src python :tangle src/one-hot.py :comments link
   from sklearn.datasets import load_iris
   from sklearn.model_selection import train_test_split
   from sklearn.tree import DecisionTreeClassifier
@@ -34,9 +39,9 @@
   print("Accuracy:", accuracy)
 #+end_src
 - Expensive computation/memory costs
-**** Mean encoding
+*** Mean encoding
 Mean encoding, also known as target encoding or likelihood encoding, is a technique used in machine learning to convert categorical variables into numerical representations. It involves replacing each category in a variable with the mean (or some other statistical measure) of the target variable for that category. This encoding can help capture the relationship between the categorical variable and the target variable, improving the performance of certain machine learning models.
-**** Feature hashing
+*** Feature hashing
 Feature hashing, also known as the hashing trick, is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
 
 Some real-world examples include:
@@ -49,7 +54,7 @@ Some real-world examples include:
 
 4. Fraud Detection: Feature hashing can be used to convert categorical features related to transactions, user behavior, or device information into numerical representations for fraud detection models. This helps capture patterns and relationships between features, enabling the model to detect fraudulent activities.
 
-#+begin_src python :tangle src/feature-hashing.py
+#+begin_src python :tangle src/feature-hashing.py :comments link
 from sklearn.feature_extraction import FeatureHasher
 
 # Example input data
@@ -66,7 +71,7 @@ hashed_data = hasher.transform(data)
 # Print the transformed features
 print(hashed_data.toarray())
 #+end_src
-**** Cross feature
+*** Cross feature
 In machine learning, a cross feature, also known as an interaction
 feature or interaction term, is a new feature that represents the
 interaction or combination of multiple existing features. It captures
@@ -76,7 +81,7 @@ information for the model.
 Here's an example of how to create cross features using the scikit-learn
 library:
 
-#+begin_src python :tangle src/cross-feature.py
+#+begin_src python :tangle src/cross-feature.py :comments link
   from sklearn.preprocessing import PolynomialFeatures
   from sklearn.linear_model import LinearRegression
 
@@ -112,9 +117,9 @@ Note that cross features can help capture non-linear relationships or
 interactions between features, but they can also increase the
 dimensionality of the data, potentially leading to overfitting if not
 used carefully.
-**** Embedding
-***** word2vec
-****** CBOW
+*** Embedding
+**** word2vec
+***** CBOW
 Continous Bag of Words (CBOW) is a model used in natural language processing (NLP) to generate word embeddings. It aims to predict a target word based on its context words within a given window size.
 
 Here's an illustration of the CBOW model:
@@ -139,7 +144,7 @@ The word embeddings for the context words are averaged or summed up, and then pa
 The output layer of the CBOW model predicts the target word using softmax or another activation function. The predicted target word is compared to the actual target word, and the model is trained to minimize the prediction error.
 
 CBOW is commonly used in word2vec, a popular word embedding technique. It is efficient and works well when the target word can be accurately predicted based on the surrounding context words.
-#+begin_src python :tangle src/cbow.py
+#+begin_src python :tangle src/cbow.py :comments link
   import numpy as np
 
   # Sample input data
@@ -242,7 +247,7 @@ CBOW is commonly used in word2vec, a popular word embedding technique. It is eff
 
 Using Pytorch, we can do:
 
-#+begin_src python :tangle src/cbow-ii.py
+#+begin_src python :tangle src/cbow-ii.py :comments link
   import torch
   import torch.nn as nn
   import torch.optim as optim
@@ -358,11 +363,11 @@ Using Pytorch, we can do:
 
   print("Predicted word:", predicted_word)
 #+end_src
-****** Skip-gram
+***** Skip-gram
 Skip-gram is a model used in natural language processing (NLP) to generate word embeddings. Unlike the Continuous Bag of Words (CBOW) model, skip-gram aims to predict the context words given a target word.
 
 During training, the model is optimized to maximize the probability of correctly predicting the context words. This is typically done using techniques like negative sampling or hierarchical softmax.
-#+begin_src python :tangle src/skip-gram.py
+#+begin_src python :tangle src/skip-gram.py :comments link
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -463,7 +468,7 @@ with torch.no_grad():
 
 print("Predicted word:", predicted_word)
 #+end_src
-***** cotrained
+**** cotrained
 Co-trained embedding, also known as joint embedding or multi-modal embedding, refers to the process of learning a shared representation space for multiple modalities or domains. It involves training an embedding model that can encode and align the information from different modalities, such as text, images, audio, or any other type of data.
 
 The goal of co-trained embedding is to capture the similarities and relationships between different modalities in a common vector space. By doing so, it enables the model to perform various tasks that involve multiple modalities, such as cross-modal retrieval, image captioning, or text-to-image synthesis.
@@ -471,9 +476,206 @@ The goal of co-trained embedding is to capture the similarities and relationship
 The process of co-trained embedding typically involves training a neural network architecture that can handle different types of input data. The network is designed to learn shared latent representations for each modality and optimize them jointly using a specific objective or loss function. This allows the model to align the embeddings of different modalities in a way that similar instances are closer together in the shared space.
 
 Co-trained embedding models have been widely used in various applications, including multimedia information retrieval, cross-modal recommendation systems, and multimodal sentiment analysis. They provide a powerful approach to leverage the complementary information from different modalities, leading to improved performance and richer understanding of the data.
-*** Training pipeline
-*** Loss function and metrics evaluations
-*** Sampling
+*** Positional embedding
+*** Data leakage
+Data leakage is when information from the target variable or future data unintentionally influences the training process, causing the model to have biased or overly optimistic predictions. It often occurs due to improper data preprocessing, splitting, or feature selection.
+**** Causes
+1. Temporal Leakage: Using future data in training, like predicting stock prices with data from after the prediction date.
+   #+begin_src python :tangle src/data-leakage.py :comments link
+     # Temporal leakage
+     import pandas as pd
+
+     # Load data
+     data = pd.read_csv("stock_prices.csv")
+     data["Date"] = pd.to_datetime(data["Date"])
+
+     # Incorrect: Shuffling before splitting
+     shuffled_data = data.sample(frac=1)
+     train_data = shuffled_data[:800]
+     test_data = shuffled_data[800:]
+
+     # Correct: Sorting and splitting by date
+     sorted_data = data.sort_values(by="Date")
+     train_data = sorted_data[:800]
+     test_data = sorted_data[800:]
+   #+end_src
+2. Target Leakage: Including target-related features in training, like predicting cancer from a dataset containing treatment information.
+   #+begin_src python :tangle src/data-leakage.py :comments link
+     # Target leakage
+     from sklearn.model_selection import train_test_split
+
+     # Load data
+     data = pd.read_csv("cancer_data.csv")
+
+     # Incorrect: Including target-related feature
+     X = data[["Age", "Gender", "Tumor_Size", "Treatment"]]
+     y = data["Cancer"]
+     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+     # Correct: Excluding target-related feature
+     X = data[["Age", "Gender", "Tumor_Size"]]
+     y = data["Cancer"]
+     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+   #+end_src
+3. Improper Preprocessing: Applying transformations or scaling on the whole dataset before splitting, which transfers information between train and test sets. /Always split your data first before scaling, then use the statistics from the train split to scale all the splits... Leakage (also) might occur if the mean or median is calculated using entire data instead of just the train split./ [fn:1].
+    #+begin_src python :tangle src/data-leakage.py :comments link
+      # Improper preprocessing leakage
+      from sklearn.preprocessing import StandardScaler
+
+      # Load data
+      data = pd.read_csv("data.csv")
+      X = data.drop("target", axis=1)
+      y = data["target"]
+
+      # Incorrect: Scaling before splitting, leaking global and test statistics to train data
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+      X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
+
+      # Correct: Scaling after splitting
+      X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+      scaler = StandardScaler()
+      X_train = scaler.fit_transform(X_train)
+      X_test = scaler.transform(X_test)
+    #+end_src
+4. Group Leakage: Some data are closely related but end up in different train/validation/test groups.
+5. Data generation leakage. Notice the data source and understanding how they are collected and processed.
+**** Feature selection/pruning
+***** Feature importance
+| Interpretability Technique  | Type               |
+|-----------------------------+--------------------|
+| [[https://interpret.ml/docs/ebm.html][Explainable Boosting]]        | glassbox model     |
+| [[https://interpret.ml/docs/dt.html][Decision Tree]]               | glassbox model     |
+| [[https://interpret.ml/docs/dr.html][Decision Rule List]]          | glassbox model     |
+| [[https://interpret.ml/docs/lr.html][Linear/Logistic Regression]]  | glassbox model     |
+| [[https://interpret.ml/docs/shap.html][SHAP Kernel Explainer]]       | blackbox explainer |
+| [[https://interpret.ml/docs/lime.html][LIME]]                        | blackbox explainer |
+| [[https://interpret.ml/docs/msa.html][Morris Sensitivity Analysis]] | blackbox explainer |
+| [[https://interpret.ml/docs/pdp.html][Partial Dependence]]          | blackbox explainer |
+***** Feature generalization
+Since the goal of an ML model is to make correct predictions on unseen data, features used for the model should generalize to unseen data. Not all features generalize equally. Overall, there are two aspects you might want to consider with regards to generalization: /feature coverage/ and /distribution of feature values./
+- Coverage: A rough rule of thumb is that if this feature appears in a very small percentage of your data, it’s not going to be very generalizable.
+- Distribution: If the set of values that appears in the seen data (such as the train split) has no overlap with the set of values that appears in the unseen data (such as the test split), this feature might even hurt your model’s performance.
+** Model development and Offline evaluation
+*** Ensembles
+**** bagging
+Given a dataset, instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
+[[./img/bagging.png]]
+**** boosting
+Each learner in this ensemble is trained on the same set of samples, but the samples are weighted differently among iterations. As a result, future weak learn‐ ers focus more on the examples that previous weak learners misclassified.
+[[./img/boosting.png]]
+**** stacking
+Stacking is an ensemble machine learning technique that combines multiple models' predictions using another model, called the meta-model. The base models are trained on the original data, while the meta-model is trained on the base models' predictions, which helps capture patterns and improve overall performance.
+
+#+begin_src python :tangle src/stacking.py :comments link
+  import numpy as np
+  from sklearn.datasets import load_iris
+  from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+  from sklearn.linear_model import LogisticRegression
+  from sklearn.model_selection import train_test_split
+  from sklearn.metrics import accuracy_score, recall_score, f1_score
+
+  # Load data
+  data = load_iris()
+  X, y = data.data, data.target
+  X_train, X_test, y_train, y_test = train_test_split(
+      X, y, test_size=0.2, random_state=28
+  )
+
+  # Base models
+  model1 = RandomForestClassifier(random_state=36)
+  model2 = GradientBoostingClassifier(random_state=98)
+
+  # Train base models
+  model1.fit(X_train, y_train)
+  model2.fit(X_train, y_train)
+
+  # Base models' predictions
+  pred1 = model1.predict(X_train)
+  pred2 = model2.predict(X_train)
+
+  print(f"Accuracy of model 1: {accuracy_score(y_train, pred1)}")
+  print(f"Accuracy of model 2: {accuracy_score(y_train, pred2)}")
+
+  stacked_predictions_train = np.column_stack((pred1, pred2))
+
+  # Train meta-model
+  meta_model = LogisticRegression(random_state=12)
+  meta_model.fit(stacked_predictions_train, y_train)
+
+  # Test predictions
+  test_pred1 = model1.predict(X_test)
+  test_pred2 = model2.predict(X_test)
+  stacked_predictions_test = np.column_stack((test_pred1, test_pred2))
+
+  # Meta-model's final prediction
+  final_prediction = meta_model.predict(stacked_predictions_test)
+
+  # Accuracy
+  print(f"Stacking Model Accuracy: {accuracy_score(y_test, final_prediction)}")
+  print(f"Recall Score: {recall_score(y_test, final_prediction, average='macro')}")
+  print(f"F1 Score: {f1_score(y_test, final_prediction, average='macro')}")
+#+end_src
+**** Experiment tracking and versioning
+It’s important to keep track of all the definitions needed to re-create an experiment and its relevant artifacts. An artifact is a file generated during an experiment—examples of artifacts can be files that show the loss curve, evaluation loss graph, logs, or intermediate results of a model throughout a training process. This enables you to compare different experiments and choose the one best suited for your needs. Comparing different experiments can also help you understand how small changes affect your model’s performance, which, in turn, gives you more visibility into how your model works.
+The process of tracking the progress and results of an experiment is called experiment tracking. The process of logging all the details of an experiment for the purpose of possibly recreating it later or comparing it with other experiments is called versioning. These two go hand in hand with each other. A large part of training an ML model is babysitting the learning processes. Many problems can arise during the training process, including loss not decreasing, overfitting, underfitting, fluctuating weight values, dead neurons, and running out of memory.
+- loss curve
+- model performance metrics: accuracy, F1, recall, perplexity[fn:2] etc.
+- log of corresponding sample, prediction, and ground truth label.
+- speed of your model, evaluated by the number of steps per second or, if your data is text, the number of tokens processed per second.
+- System performance metrics such as memory usage and CPU/GPU utilization.
+- The values over time of any parameter and hyperparameter whose changes can affect your model’s performance, such as the learning rate if you use a learning rate schedule; gradient norms (both globally and per layer) etc.
+*** Distributed Training
 *** DL model architecture
+**** [[file:papers/Wide & Deep Learning for Recommender Systems.pdf][Wide and Deep Architecture]]
+***** Architecture
+[[file:./img/wide-and-deep-architecture.png]]
+***** [[https://paperswithcode.com/paper/wide-deep-learning-for-recommender-systems#code][Paperwithcode]]
+**** [[file:papers/youtube-multitask.pdf][Two-tower architecture]]
+[[file:./img/two-tower.png]]
+**** [[https://arxiv.org/pdf/2008.13535.pdf][Deep cross network]]
+**** [[https://daiwk.github.io/assets/youtube-multitask.pdf][Multitask learning]]
+**** [[https://arxiv.org/abs/1906.00091][Facebook DLRM]]
+** Experiment
 *** A/B testing
-*** Deployment patterns
+** Deployment
+
+* Footnotes
+[fn:2] Perplexity is a model performance metric used to evaluate the quality of language models, such as those used for natural language processing tasks. It measures how well the model predicts a given sample, with lower perplexity indicating a better fit. Essentially, it quantifies the average log-probability of the model's predictions, with a lower perplexity value implying a higher probability of predicting the correct words.
+#+begin_src python :tangle src/perplexity.py :comments link
+  import nltk
+  from nltk.lm.preprocessing import padded_everygram_pipeline
+  from nltk.lm import MLE
+  from nltk.tokenize import word_tokenize, sent_tokenize
+  from math import exp
+
+  # Sample text
+  text = "This is a sample text. We use it to demonstrate perplexity calculation."
+
+  # Tokenize and preprocess
+  sentences = sent_tokenize(text)
+  tokenized_text = [word_tokenize(sent) for sent in sentences]
+  n = 3  # Trigram model
+  train_data, padded_sents = padded_everygram_pipeline(n, tokenized_text)
+
+  # Train language model
+  model = MLE(n)
+  model.fit(train_data, padded_sents)
+
+  # Test sentence
+  test_sentence = "This is a test sentence."
+  tokenized_test_sentence = word_tokenize(test_sentence)
+
+  # Calculate perplexity
+  test_ngrams = list(nltk.ngrams(tokenized_test_sentence, n))
+  log_prob = 0
+
+  for ngram in test_ngrams:
+      if model.score(ngram[:-1], ngram[-1]) > 0:
+          log_prob += -1 * model.logscore(ngram[-1], ngram[:-1])
+
+  perplexity = exp(log_prob / len(test_ngrams))
+  print(f"Perplexity: {perplexity}")
+#+end_src
+
+[fn:1] Chip Huyen, Designing Machine Learning Systems, p.138

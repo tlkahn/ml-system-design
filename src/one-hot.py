@@ -1,3 +1,4 @@
+# [[file:../README.org::*Common problems][Common problems:1]]
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
@@ -25,3 +26,4 @@ tree_model.fit(X_train_encoded, y_train)
 # Evaluate the model on the test set
 accuracy = tree_model.score(X_test_encoded, y_test)
 print("Accuracy:", accuracy)
+# Common problems:1 ends here

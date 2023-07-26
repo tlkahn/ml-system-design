@@ -1,3 +1,4 @@
+# [[file:../README.org::*Feature hashing][Feature hashing:1]]
 from sklearn.feature_extraction import FeatureHasher
 
 # Example input data
@@ -13,3 +14,4 @@ hashed_data = hasher.transform(data)
 
 # Print the transformed features
 print(hashed_data.toarray())
+# Feature hashing:1 ends here
