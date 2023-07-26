@@ -556,7 +556,7 @@ Data leakage is when information from the target variable or future data uninten
 Since the goal of an ML model is to make correct predictions on unseen data, features used for the model should generalize to unseen data. Not all features generalize equally. Overall, there are two aspects you might want to consider with regards to generalization: /feature coverage/ and /distribution of feature values./
 - Coverage: A rough rule of thumb is that if this feature appears in a very small percentage of your data, it’s not going to be very generalizable.
 - Distribution: If the set of values that appears in the seen data (such as the train split) has no overlap with the set of values that appears in the unseen data (such as the test split), this feature might even hurt your model’s performance.
-** Model development and Offline evaluation
+** Model development
 *** Ensembles
 **** bagging
 Given a dataset, instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
@@ -625,8 +625,117 @@ The process of tracking the progress and results of an experiment is called expe
 - speed of your model, evaluated by the number of steps per second or, if your data is text, the number of tokens processed per second.
 - System performance metrics such as memory usage and CPU/GPU utilization.
 - The values over time of any parameter and hyperparameter whose changes can affect your model’s performance, such as the learning rate if you use a learning rate schedule; gradient norms (both globally and per layer) etc.
-*** Distributed Training
-*** DL model architecture
+*** Distributed Training [fn:3]
+data parallelism
+model parallelism
+pipeline parallelism
+hybrid parallelism
+*** Offline Evaluation
+**** Metrics
+- Precision
+- Recall
+- F1
+  F1, precision, and recall are asymmetric metrics because they don't treat false positives and false negatives equally. Precision focuses on the proportion of true positives among predicted positives, while recall focuses on the proportion of true positives among actual positives. F1 score is the harmonic mean of precision and recall, balancing the two metrics. As a result, they emphasize different aspects of a model's performance.
+
+  #+begin_src python :tangle src/evaluation-metrics.py :comments link
+    from sklearn.metrics import precision_score, recall_score, f1_score
+    from sklearn.datasets import make_classification
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LogisticRegression
+
+    # Generate synthetic binary classification data
+    X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Train a classifier
+    clf = LogisticRegression(random_state=42)
+    clf.fit(X_train, y_train)
+
+    # Predictions
+    y_pred = clf.predict(X_test)
+
+    # Calculate precision, recall, and F1 score
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+
+    print(f"Precision: {precision}")
+    print(f"Recall: {recall}")
+    print(f"F1 Score: {f1}")
+
+    # Confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    tn, fp, fn, tp = cm.ravel()
+
+    print(f"Precision: {precision}")
+    print(f"Recall: {recall}")
+    print(f"F1 Score: {f1}")
+    print(f"Confusion Matrix:\n{cm}")
+
+    # Modify predictions to increase false positives
+    y_pred_modified = np.copy(y_pred)
+    y_pred_modified[:20] = 1  # Force the first 20 instances to be positive
+
+    # Recalculate metrics
+    precision_modified = precision_score(y_test, y_pred_modified)
+    recall_modified = recall_score(y_test, y_pred_modified)
+    f1_modified = f1_score(y_test, y_pred_modified)
+
+    print("\nModified Metrics:")
+    print(f"Precision: {precision_modified}")
+    print(f"Recall: {recall_modified}")
+    print(f"F1 Score: {f1_modified}")
+  #+end_src
+
+Asymmetric metrics like precision, recall, and F1 score treat false positives and false negatives differently due to their distinct formulas. To understand their asymmetry and effects, let's break down each metric:
+
+1. Precision: (True Positives) / (True Positives + False Positives)
+   - High precision means fewer false positives.
+   - If precision is low, the model incorrectly classifies many negative instances as positive.
+
+2. Recall: (True Positives) / (True Positives + False Negatives)
+   - High recall means fewer false negatives.
+   - If recall is low, the model misses many positive instances, classifying them as negative.
+
+3. F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
+   - Balances precision and recall, considering both false positives and false negatives.
+
+The asymmetry of these metrics can be observed in situations where one metric is high while the other is low. For example, a model with high precision but low recall is good at avoiding false positives but misses many actual positive instances. Conversely, a model with high recall but low precision correctly identifies most positive instances but generates many false positives.
+
+Understanding these asymmetries helps you choose an appropriate metric based on your specific problem or application's requirements. For instance, in a medical diagnosis system, you might prioritize high recall to avoid missing positive cases, even if it means more false positives. Conversely, in a spam detection system, you might focus on high precision to reduce false positives, ensuring that legitimate emails don't end up in the spam folder.
+
+**** Baselines
+***** Evaluation metrics, by themselves, mean little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
+- random baseline
+- simple heuristic baseline
+- zero rule baseline
+  A special case of the simple heuristic baseline when your baseline model always predicts the most common class
+- human baseline
+- existing solutions
+**** Methods
+***** perturbation tests
+The more sensitive your model is to noise, the harder it will be to maintain it.
+***** invariance tests
+Excluding sensitive information or adding/removing/changing irrelavant dimensions should not affect the predictions.
+***** directional expectation tests
+Models with changed data in dimensions should not generate predictions with directions against common sense.
+***** model calibration
+If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
+
+To measure a model’s calibration, a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
+
+To calibrate your models, a common method is Platt scaling, which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
+***** confidence measurement
+If you only want to show the predictions that your model is certain about, how do you measure that certainty?
+***** slice-based evaluation
+Slicing means to separate your data into subsets and look at your model’s performance on each subset separately.
+
+- heuristics-based
+- error analysis
+- slice finder
+*** Model Architecture
 **** [[file:papers/Wide & Deep Learning for Recommender Systems.pdf][Wide and Deep Architecture]]
 ***** Architecture
 [[file:./img/wide-and-deep-architecture.png]]
@@ -636,11 +745,14 @@ The process of tracking the progress and results of an experiment is called expe
 **** [[https://arxiv.org/pdf/2008.13535.pdf][Deep cross network]]
 **** [[https://daiwk.github.io/assets/youtube-multitask.pdf][Multitask learning]]
 **** [[https://arxiv.org/abs/1906.00091][Facebook DLRM]]
-** Experiment
-*** A/B testing
+*** Experiment
+**** A/B testing
+**** Bayesian optimization
 ** Deployment
 
 * Footnotes
+
+[fn:3] Source: Kabir Nagrecha, Systems for Parallel and Distributed Large-Model Deep Learning Training
 [fn:2] Perplexity is a model performance metric used to evaluate the quality of language models, such as those used for natural language processing tasks. It measures how well the model predicts a given sample, with lower perplexity indicating a better fit. Essentially, it quantifies the average log-probability of the model's predictions, with a lower perplexity value implying a higher probability of predicting the correct words.
 #+begin_src python :tangle src/perplexity.py :comments link
   import nltk
