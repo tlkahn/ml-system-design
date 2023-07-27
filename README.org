@@ -617,6 +617,114 @@ Since the goal of an ML model is to make correct predictions on unseen data, fea
 - Coverage: A rough rule of thumb is that if this feature appears in a very small percentage of your data, it’s not going to be very generalizable.
 - Distribution: If the set of values that appears in the seen data (such as the train split) has no overlap with the set of values that appears in the unseen data (such as the test split), this feature might even hurt your model’s performance.
 * Model development
+** Classic ML
+*** Exploratory data analysis (EDA)
+Exploratory Data Analysis (EDA) is an essential step in the data analysis process, where the primary goal is to understand, summarize, and visualize the main characteristics and structure of a dataset. EDA involves examining the data, identifying patterns, detecting anomalies, and formulating hypotheses before building predictive models or conducting more formal statistical analyses.
+
+EDA is an iterative and open-ended process that can involve various techniques, including:
+
+1. **Descriptive statistics**: Compute summary statistics such as mean, median, mode, standard deviation, variance, skewness, and kurtosis to understand the central tendency, dispersion, and shape of the data distribution.
+
+2. **Data cleaning**: Identify and handle missing values, outliers, and inconsistencies in the data. This process may involve imputation, data transformation, or removal of problematic data points.
+
+3. **Data visualization**: Create visual representations of the data, such as histograms, box plots, scatter plots, bar charts, and heatmaps, to explore the relationships between variables, identify trends, and spot potential outliers or anomalies.
+
+4. **Feature engineering**: Generate new features based on existing variables to improve the quality of the data and its ability to capture useful patterns. This can include creating interaction terms, aggregating variables, or applying dimensionality reduction techniques.
+
+5. **Correlation analysis**: Investigate the relationships between variables by calculating correlation coefficients, such as Pearson's correlation coefficient for linear relationships or Spearman's rank correlation for monotonic relationships.
+
+6. **Segmentation**: Divide the data into different groups or categories based on specific criteria, such as demographics or behavior patterns, to analyze the differences and similarities between the groups.
+
+The main benefits of EDA are:
+
+- Gaining a better understanding of the data's structure, relationships, and patterns, which can inform the choice of modeling techniques and feature engineering strategies.
+- Identifying potential issues, such as missing values, outliers, and inconsistencies, that may affect the quality and reliability of the analysis.
+- Generating hypotheses about the data that can be tested using more formal statistical methods or predictive models.
+
+By conducting EDA, analysts and data scientists can make more informed decisions about the appropriate techniques to use in the subsequent steps of the data analysis process and increase the chances of obtaining meaningful and accurate results.
+
+Below is an example of using tsne for EDA:
+
+#+begin_src python :tangle src/simple-tsne.py :comments link
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import pandas as pd
+  import seaborn as sns
+  from sklearn import datasets
+  from sklearn import manifold
+
+  data = datasets.fetch_openml("mnist_784", version=1, return_X_y=True, parser="auto")
+  pixel_values, targets = data
+  targets = targets.astype(int)
+  single_image = pixel_values.iloc[1, :].values.reshape(28, 28)
+  plt.imshow(single_image, cmap="gray")
+  plt.savefig("../img/single_mnist_image.png")
+  plt.clf()
+
+  tsne = manifold.TSNE(n_components=2, random_state=42)
+  transformed_data = tsne.fit_transform(pixel_values.iloc[:100, :])
+
+  tsne_df = pd.DataFrame(
+      np.column_stack((transformed_data, targets[:100])), columns=["x", "y", "targets"]
+  )
+  # tsne_df.loc[:, "targets"] = tsne_df.targets.astype(int)
+  grid = sns.FacetGrid(tsne_df, hue="targets")
+  grid.map(sns.scatterplot, "x", "y").add_legend()
+  plt.savefig("../img/tsne.png")
+#+end_src
+[[./img/single_mnist_image.png]]
+[[./img/tsne.png]]
+*** Cross validation
+Here is an example of overfitting:
+#+begin_src python :tangle src/overfitting-demo.py :comments link
+  # import scikit-learn tree and metrics
+  from sklearn import tree
+  from sklearn import metrics
+
+  # import matplotlib and seaborn # for plotting
+  import matplotlib
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from scipy import stats
+  from sklearn.datasets import load_wine
+  import pandas as pd
+  from sklearn.model_selection import train_test_split
+
+  data = load_wine()
+  # data.data # 178 * 13
+  # stats.describe(data.data)
+  # data.data.shape # 13 dimensions
+  # data.target # {0, 1, 2}
+  # this is our global size of label text # on the plots
+  matplotlib.rc("xtick", labelsize=20)
+  matplotlib.rc("ytick", labelsize=20)
+  # This line ensures that the plot is displayed # inside the notebook
+  # initialize lists to store accuracies # for training and test data
+  # we start with 50% accuracy train_accuracies = [0.5] test_accuracies = [0.5]
+  # iterate over a few depth values
+  train_accuracies = test_accuracies = []
+  train_data, test_data, train_labels, test_labels = train_test_split(
+      data.data, data.target, test_size=0.3
+  )
+  for depth in range(1, 50):
+      clf = tree.DecisionTreeClassifier(max_depth=depth)
+      clf.fit(train_data, train_labels)
+      train_predictions = clf.predict(train_data)
+      test_predictions = clf.predict(test_data)
+      train_accuracy = metrics.accuracy_score(train_labels, train_predictions)
+      test_accuracy = metrics.accuracy_score(test_labels, test_predictions)
+      train_accuracies.append(train_accuracy)
+      test_accuracies.append(test_accuracy)
+
+  # plot train_accuracies and test_accuracies
+  plt.figure(figsize=(10, 5))
+  sns.set_style("whitegrid")
+  plt.plot(train_accuracies, label="train accuracy")
+  plt.plot(test_accuracies, label="test accuracy")
+  plt.savefig("../img/overfitting-demo.png")
+  # plt.show()
+#+end_src
+[[./img/overfitting-demo.png]]
 ** Ensembles
 *** bagging
 Given a dataset [fn:16], instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
@@ -793,7 +901,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 *** Data Spilling/CPU offloading across the memory hierarchy
 *** Memory efficient data representations
 ** Finetuning
-  Fine-tuning [fn:6], especially in the context of modern deep learning models, refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
+  Fine-tuning [fn:6], especially in the context of modern deep learning models [cite:@lialin2023scaling], refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
 
   Fine-tuning typically involves the following steps:
 
@@ -851,10 +959,9 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
             loss.backward()
             optimizer.step()
   #+end_src
-
-** Repurposing
-- Knowledge injection [fn:5]
-- Adapter modules
+- Repurposing
+  + Knowledge injection [fn:5]
+  + Adapter modules
 ** Model compression
 ...three main approaches to reduce its inference latency: make it do inference faster, make the model smaller, or make the hardware it’s deployed on run faster. The process of making a model smaller is called model compression, and the process to make it do inference faster is called inference optimization.
 
@@ -1138,6 +1245,7 @@ Ref [fn:17]
 [fn:7]
 https://arxiv.org/abs/2106.09685
 [fn:6]
+- [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]]
 - https://www.youtube.com/watch?v=YVU5wAA6Txoa
 - [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]]
 - https://www.youtube.com/watch?v=TPcXVJ1VSRI
@@ -1146,6 +1254,7 @@ https://arxiv.org/abs/2106.09685
 [fn:5]
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
+- [[https://magazine.sebastianraschka.com/p/finetuning-llms-with-adapters][Finetuning LLMs Efficiently with Adapters]]
 [fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as "fixed point."
 - https://huggingface.co/docs/optimum/concept_guides/quantization
 - https://arxiv.org/abs/1906.00532

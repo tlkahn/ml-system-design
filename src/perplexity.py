@@ -1,35 +1,40 @@
-# [[file:../README.org::*Footnotes][Footnotes:1]]
-import nltk
-from nltk.lm.preprocessing import padded_everygram_pipeline
-from nltk.lm import MLE
-from nltk.tokenize import word_tokenize, sent_tokenize
-from math import exp
+# [[file:../README.org::*Experiment tracking and versioning][Experiment tracking and versioning:1]]
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
-# Sample text
-text = "This is a sample text. We use it to demonstrate perplexity calculation."
 
-# Tokenize and preprocess
-sentences = sent_tokenize(text)
-tokenized_text = [word_tokenize(sent) for sent in sentences]
-n = 3  # Trigram model
-train_data, padded_sents = padded_everygram_pipeline(n, tokenized_text)
+# Create a simple model
+class SimpleModel(nn.Module):
+    def __init__(self):
+        super(SimpleModel, self).__init__()
+        self.fc = nn.Linear(10, 1)
 
-# Train language model
-model = MLE(n)
-model.fit(train_data, padded_sents)
+    def forward(self, x):
+        return self.fc(x)
 
-# Test sentence
-test_sentence = "This is a test sentence."
-tokenized_test_sentence = word_tokenize(test_sentence)
 
-# Calculate perplexity
-test_ngrams = list(nltk.ngrams(tokenized_test_sentence, n))
-log_prob = 0
+model = SimpleModel()
+optimizer = optim.SGD(model.parameters(), lr=0.01)
 
-for ngram in test_ngrams:
-    if model.score(ngram[:-1], ngram[-1]) > 0:
-        log_prob += -1 * model.logscore(ngram[-1], ngram[:-1])
+# Save a checkpoint
+torch.save(
+    {
+        "epoch": 5,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "loss": 0.05,
+    },
+    "checkpoint.pth",
+)
 
-perplexity = exp(log_prob / len(test_ngrams))
-print(f"Perplexity: {perplexity}")
-# Footnotes:1 ends here
+# Load a checkpoint
+checkpoint = torch.load("checkpoint.pth")
+model.load_state_dict(checkpoint["model_state_dict"])
+optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+epoch = checkpoint["epoch"]
+loss = checkpoint["loss"]
+
+model.train()  # Set the model in train mode
+# Continue training...
+# Experiment tracking and versioning:1 ends here
