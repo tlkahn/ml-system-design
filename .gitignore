@@ -1,4 +1,5 @@
 books
+TAGS
 papers
 tmp
 **/*.trash.*
@@ -6,3 +7,6 @@ README.tex
 README.pdf
 bib
 /README.html
+/.vscode/
+data
+/ltximg/

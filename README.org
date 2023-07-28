@@ -16,6 +16,9 @@ References [fn:13]
   + pubsub
   + Message queue
 * Feature selection/engineering
+ Feature extraction refers to the process of transforming raw data into a more suitable format or representation for machine learning algorithms to work with. This can involve reducing the dimensionality, creating new features, or combining existing features to capture the underlying patterns in the data. Feature selection, on the other hand, focuses on selecting the most important features from the original dataset that contribute significantly to the model's performance. This is done to reduce overfitting, improve model interpretability, and decrease training time.
+
+ Feature extraction is concerned with creating or transforming features, while feature selection is about identifying the most relevant features for a specific model.
 ** One-hot encoding
 *** Common problems
 - Not work well with tree-based modesl: decision trees, random forests, etc.
@@ -53,7 +56,7 @@ References [fn:13]
 ** Mean encoding
 Mean encoding, also known as target encoding or likelihood encoding, is a technique used in machine learning to convert categorical variables into numerical representations. It involves replacing each category in a variable with the mean (or some other statistical measure) of the target variable for that category. This encoding can help capture the relationship between the categorical variable and the target variable, improving the performance of certain machine learning models.
 ** Feature hashing
-Feature hashing [fn:14], also known as the hashing trick, is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
+Feature hashing [fn:14], also known as the hashing trick [cite:@freksen2018fully; @weinberger2010feature], is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
 
 Some real-world examples include:
 
@@ -61,12 +64,52 @@ Some real-world examples include:
 
 2. Recommender Systems: Feature hashing can be used to handle high-dimensional categorical features, such as user or item IDs, in recommender systems. By converting these categorical features into numerical representations, feature hashing enables efficient computation and storage of large-scale recommendation models.
 
-3. Click-through Rate (CTR) Prediction: In online advertising, feature hashing can be employed to handle the high-cardinality categorical features present in user demographics, ad properties, or context. By hashing these features, it reduces the dimensionality and allows for faster model training and prediction in CTR prediction models.
+3. Click-through Rate (CTR) Prediction: In online advertising, feature hashing can be employed to handle the high-cardinality categorical features present in user demographics, ad properties, or context. By hashing these features, it reduces the dimensionality and allows for faster model training and prediction in CTR prediction models. Here is an example:
+
+   #+begin_src python :tangle feature-hashing-ctr-example.py :comments link
+     from sklearn.feature_extraction import FeatureHasher
+     from sklearn.linear_model import LogisticRegression
+     from sklearn.model_selection import train_test_split
+     from sklearn.metrics import accuracy_score
+
+     # Example data
+     data = [
+         {"user_id": "user1", "ad_id": "ad1", "age": "25", "gender": "M", "clicked": 1},
+         {"user_id": "user2", "ad_id": "ad2", "age": "30", "gender": "F", "clicked": 0},
+         {"user_id": "user3", "ad_id": "ad3", "age": "35", "gender": "M", "clicked": 0},
+         {"user_id": "user4", "ad_id": "ad4", "age": "40", "gender": "F", "clicked": 1},
+     ]
+
+     # Extract features and labels
+     features = [{k: v for k, v in item.items() if k != "clicked"} for item in data]
+     labels = [item["clicked"] for item in data]
+
+     # Use FeatureHasher to handle high-cardinality categorical features
+     hasher = FeatureHasher(n_features=20, input_type="dict")
+     hashed_features = hasher.transform(features).toarray()
+
+     # Split the data into training and testing sets
+     X_train, X_test, y_train, y_test = train_test_split(
+         hashed_features, labels, test_size=0.25, random_state=42
+     )
+
+     # Train a logistic regression model
+     clf = LogisticRegression(solver="lbfgs")
+     clf.fit(X_train, y_train)
+
+     # Predict on the test set and calculate the accuracy
+     y_pred = clf.predict(X_test)
+     accuracy = accuracy_score(y_test, y_pred)
+
+     print("Predicted values: ", y_pred)
+     print("Accuracy: ", accuracy)
+   #+end_src
 
 4. Fraud Detection: Feature hashing can be used to convert categorical features related to transactions, user behavior, or device information into numerical representations for fraud detection models. This helps capture patterns and relationships between features, enabling the model to detect fraudulent activities.
 
 #+begin_src python :tangle src/feature-hashing.py :comments link
   from sklearn.feature_extraction import FeatureHasher
+  import numpy as np
 
   # Example input data
   data = [
@@ -83,7 +126,9 @@ Some real-world examples include:
 
   # Print the transformed features
   print(hashed_data.toarray())
+  print(np.array(hashed_data.toarray()).shape)
 #+end_src
+
 ** Cross feature
 In machine learning, a cross feature, also known as an interaction
 feature or interaction term, is a new feature that represents the
@@ -725,6 +770,91 @@ Here is an example of overfitting:
   # plt.show()
 #+end_src
 [[./img/overfitting-demo.png]]
+Cross-validation is a technique used to assess the performance of a machine learning model on unseen data. It helps overcome overfitting by providing a more accurate estimate of the model's performance on new data and ensuring that the model generalizes well to different subsets of the data.
+
+Overfitting occurs when a model learns the training data too well, capturing noise and patterns that are not representative of the underlying data distribution. As a result, the model performs poorly on unseen data because it has essentially "memorized" the training data rather than learning to generalize from it.
+
+Cross-validation can be categorized as follows:
+
+- k-fold cross-validation
+- stratified k-fold cross-validation
+- hold-out based validation
+- leave-one-out cross-validation
+- group k-fold cross-validation
+
+Here is an example of k-fold CV:
+#+begin_src python :tangle src/basic-k-fold.py :comments link
+  import pandas as pd
+  from sklearn import model_selection
+  from sklearn.utils import Bunch
+  from sklearn import datasets
+
+  # Training data is in a CSV file called train.csv
+  iris_data = datasets.load_iris()
+  # df.keys()
+  # dict_keys(['data', 'target', 'frame', 'target_names', 'DESCR',
+  # df.data.shape  # (150, 4)
+  # df.target.shape  # (150,)
+  # df.target_names  # array(['setosa', 'versicolor', 'virginica'], dtype='<U10')
+  # df.feature_names  # ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)']
+  # we create a new column called kfold and fill it with -1
+  # create a pandas dataset from df.data
+  df = pd.DataFrame(iris_data.data, columns=iris_data.feature_names)
+  df = df.sample(frac=1).reset_index(drop=True)
+  # initiate the kfold class from model_selection module
+  kf = model_selection.KFold(n_splits=5)
+  # fill the new kfold column
+  for fold, (trn_, val_) in enumerate(kf.split(X=df)):
+      # trn_ and val_ are indexes of the training and validation subsets
+      # like:
+      #   [ 30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47
+      #   48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65
+      #   66  67  68  69  70  71  72  73  74  75  76  77  78  79  80  81  82  83
+      #   84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101
+      #  102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119
+      #  120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137
+      #  138 139 140 141 142 143 144 145 146 147 148 149]
+      #  [ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+      #  24 25 26 27 28 29]
+      df.loc[val_, "kfold"] = fold
+  # save the new csv with kfold column
+  df.to_csv("../data/train_folds.csv", index=False)
+#+end_src
+
+The next important type of cross-validation is stratified k-fold. If you have a skewed dataset for binary classification with 90% positive samples and only 10% negative samples, you don't want to use random k-fold cross-validation. Using simple k-fold cross-validation for a dataset like this can result in folds with all negative samples. The rule is simple. If it’s a standard classification problem, choose stratified k-fold blindly.
+
+In regression problems, the target variable is continuous, so you cannot directly use `StratifiedKFold`, which is designed for classification problems with categorical target variables. However, you can create a workaround by discretizing the continuous target variable into bins, as if it were a categorical variable, and then apply `StratifiedKFold`.
+
+Here's an example using Python, pandas, and scikit-learn:
+
+#+begin_src python :tangle src/basic-regression-k-fold.py :comments link
+  import numpy as np
+  import pandas as pd
+  from sklearn.model_selection import StratifiedKFold
+
+  # Create a sample dataset
+  data = {
+      "Feature1": np.random.rand(20),
+      "Feature2": np.random.rand(20),
+      "Target": np.random.rand(20),
+  }
+  df = pd.DataFrame(data)
+
+  # Discretize the target variable into bins
+  num_bins = 5
+  labels = [f"Bin_{i}" for i in range(1, num_bins + 1)]
+  df["Target_Bin"] = pd.cut(df["Target"], bins=num_bins, labels=labels)
+
+  # Create StratifiedKFold
+  stratified_kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+  # Split the dataset into folds
+  for train_index, test_index in stratified_kfold.split(df, df["Target_Bin"]):
+      train_set = df.iloc[train_index]
+      test_set = df.iloc[test_index]
+      print("Train set:\n", train_set, "\nTest set:\n", test_set, "\n---")
+#+end_src
+
 ** Ensembles
 *** bagging
 Given a dataset [fn:16], instead of training one classifier on the entire dataset, you sample with replacement to create different datasets, called bootstraps, and train a smaller classifier or regression model on each of these bootstraps. If the problem is classification, the final prediction is decided by the majority vote of all models. If the problem is regression, the final prediction is the average of all models’ predictions.
@@ -1083,11 +1213,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 
 ** Offline Evaluation
 *** Metrics
-- Precision
-- Recall
-- F1
-- Asymmetric metrics:
-  F1, precision, and recall are asymmetric metrics because they don't treat false positives and false negatives equally. Precision focuses on the proportion of true positives among predicted positives, while recall focuses on the proportion of true positives among actual positives. F1 score is the harmonic mean of precision and recall, balancing the two metrics. As a result, they emphasize different aspects of a model's performance.
+F1, precision, and recall are asymmetric metrics because they don't treat false positives and false negatives equally. Precision focuses on the proportion of true positives among predicted positives, while recall focuses on the proportion of true positives among actual positives. F1 score is the harmonic mean of precision and recall, balancing the two metrics. As a result, they emphasize different aspects of a model's performance.
 
   #+begin_src python :tangle src/evaluation-metrics.py :comments link
     from sklearn.metrics import precision_score, recall_score, f1_score
@@ -1136,29 +1262,163 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
     f1_modified = f1_score(y_test, y_pred_modified)
 
     print("\nModified Metrics:")
-    print(f"Precision: {precision_modified}")
+    print(f"Precision: {precision_modified}") # (ref:precision)
     print(f"Recall: {recall_modified}")
     print(f"F1 Score: {f1_modified}")
   #+end_src
 
-    Asymmetric metrics like precision, recall, and F1 score treat false positives and false negatives differently due to their distinct formulas. To understand their asymmetry and effects, let's break down each metric:
+  1. [[(precision)][Precision]]: (True Positives) / (True Positives + False Positives)
+     - High precision means fewer false positives.
+     - If precision is low, the model incorrectly classifies many negative instances as positive.
 
-    1. Precision: (True Positives) / (True Positives + False Positives)
-    - High precision means fewer false positives.
-    - If precision is low, the model incorrectly classifies many negative instances as positive.
+  2. Recall: (True Positives) / (True Positives + False Negatives)
+     - High recall means fewer false negatives.
+     - If recall is low, the model misses many positive instances, classifying them as negative.
 
-    2. Recall: (True Positives) / (True Positives + False Negatives)
-    - High recall means fewer false negatives.
-    - If recall is low, the model misses many positive instances, classifying them as negative.
+  3. F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
+     - Balances precision and recall, considering both false positives and false negatives.
 
-    3. F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
-    - Balances precision and recall, considering both false positives and false negatives.
+  4. Precision at k (P@K):
 
-    - The asymmetry of these metrics can be observed in situations where one metric is high while the other is low. For example, a model with high precision but low recall is good at avoiding false positives but misses many actual positive instances. Conversely, a model with high recall but low precision correctly identifies most positive instances but generates many false positives.
+     The metric is particularly useful in the context of recommendation systems and search engines, to evaluate the relevance of the top k items or results returned by a model. It is the proportion of the top k items that are relevant or correct.
 
-    - Understanding these asymmetries helps you choose an appropriate metric based on your specific problem or application's requirements. For instance, in a medical diagnosis system, you might prioritize high recall to avoid missing positive cases, even if it means more false positives. Conversely, in a spam detection system, you might focus on high precision to reduce false positives, ensuring that legitimate emails don't end up in the spam folder.
+     Precision at k is defined as follows:
+
+     P@k = (Number of relevant items in the top k items) / k
+
+     For example, consider a recommendation system that recommends movies to users. Suppose the system returns the following recommendations for a user:
+
+     - Recommended movies: [M1, M2, M3, M4, M5]
+     - Relevant movies for the user: [M1, M4, M6]
+
+     Here, we can calculate the Precision at k for different values of k:
+
+        - P@1 = $\frac{1}{1}$ = 1.0 (since M1 is relevant)
+        - P@2 = $\frac{1}{2}$ = 0.5 (since M1 is relevant, but M2 is not)
+        - P@3 = $\frac{1}{3}$ = 0.33 (since M1 is relevant, but M2 and M3 are not)
+        - P@4 = $\frac{2}{4}$ = 0.5 (since M1 and M4 are relevant)
+        - P@5 = $\frac{2}{5}$ = 0.4 (since M1 and M4 are relevant, but M5 is not)
+
+       In this example, P@k gives us insight into the quality of the top k recommendations, indicating how many of them are relevant to the user.
+
+  5. Average precision at k (AP@K):
+
+    AP@k takes into account both the precision at various cutoff points (k) and the ordering of the items in the list.
+
+    AP@k is defined as the average of the precision values obtained at each position in the ranked list where a relevant item is found, up to position k:
+
+    \[AP@k = \frac{1}{\text{Number of relevant items}} \sum_{i=1}^k (P(i) \cdot rel(i))\]
+
+    - $P(i)$ is the precision at position i in the ranked list.
+    - $rel(i)$ is an indicator function, which is equal to 1 if the item at position $i$ is relevant, and 0 otherwise.
+
+    The AP@k metric gives higher scores to ranked lists where relevant items appear earlier in the list. It combines both precision and recall by considering the position of relevant items and their ordering in the ranked list.
+
+    For example, consider a recommendation system that recommends movies to users. Suppose the system returns the following recommendations for a user:
+
+    - Recommended movies: [M1, M2, M3, M4, M5]
+    - Relevant movies for the user: [M1, M4, M6]
+
+    In this case, we can calculate the AP@5 as follows:
+
+    - P(1) = $\frac{1}{1}$ = 1.0 (since M1 is relevant)
+    - P(2) = $\frac{1}{2}$ = 0.5 (since M1 is relevant, but M2 is not)
+    - P(3) = $\frac{1}{3}$ = 0.33 (since M1 is relevant, but M2 and M3 are not)
+    - P(4) = $\frac{2}{4}$ = 0.5 (since M1 and M4 are relevant)
+
+    $AP@5 = (1 / 2) * (1.0 * 1 + 0.5 * 1) = 0.75$
+
+    In this example, the AP@5 score is 0.75, indicating the quality of the recommendations and their ordering in the ranked list.
+
+    The asymmetry of these metrics can be observed in situations where one metric is high while the other is low. For example, a model with high precision but low recall is good at avoiding false positives but misses many actual positive instances. Conversely, a model with high recall but low precision correctly identifies most positive instances but generates many false positives. Understanding these asymmetries helps you choose an appropriate metric based on your specific problem or application's requirements. For instance, in a medical diagnosis system, you might prioritize high recall to avoid missing positive cases, even if it means more false positives. Conversely, in a spam detection system, you might focus on high precision to reduce false positives, ensuring that legitimate emails don't end up in the spam folder.
+
+    Here are some circumstances that require high precision and high recall:
+
+    1. High Precision: High precision is important when the cost of false positives is high or when you want to be very confident about the positive predictions made by the model. Examples of situations that require high precision include:
+
+        - Email spam filtering: You don't want to accidentally classify important emails as spam (false positives), as this could cause users to miss important messages.
+        - Fraud detection: Incorrectly flagging a transaction as fraudulent (false positive) can lead to customer dissatisfaction and lost business. It is important to minimize false positives for a better user experience.
+
+    2. High Recall: High recall is important when the cost of false negatives is high or when you want to capture as many positive instances as possible. Examples of situations that require high recall include:
+
+        - Medical diagnosis: Missing a positive case of a serious disease (false negative) can have severe consequences for the patient. A high recall ensures that positive cases are identified even at the expense of some false positives.
+        - Search engines: Users expect search engines to return all relevant documents for a query. High recall ensures that the search engine retrieves as many relevant results as possible, even if some irrelevant results are also returned.
+
+    It is possible to have both high precision and high recall, but there is often a trade-off between the two. Increasing precision may lead to a decrease in recall, and vice versa. The trade-off arises from the fact that increasing the threshold for classifying positive instances in a model often results in fewer false positives (increasing precision) but more false negatives (decreasing recall), and decreasing the threshold has the opposite effect. The balance between precision and recall depends on the specific problem and the desired outcomes. In some cases, it may be more important to prioritize one over the other, while in other cases, a balance between the two is desired. In practice, the relationship between precision and recall is often visualized using a Precision-Recall curve, which shows how precision and recall change as the classification threshold is varied. This curve helps to identify the optimal threshold for the desired balance between precision and recall in a specific application.
+
+    #+begin_src python :tangle src/precision-recall-curve.py :comments link
+      import numpy as np
+      from sklearn.datasets import make_classification
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.model_selection import train_test_split
+      import matplotlib.pyplot as plt
+
+      # Create a sample dataset
+      X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
+
+      # Split the dataset into train and test sets
+      X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=0.25, random_state=42
+      )
+
+      # Train a logistic regression model
+      model = LogisticRegression(solver="liblinear", random_state=42)
+      model.fit(X_train, y_train)
+
+      from sklearn.metrics import precision_recall_curve
+
+      # Get predicted probabilities for the positive class
+      y_scores = model.predict_proba(X_test)[:, 1]
+
+      # Compute the Precision-Recall curve
+      precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
+      plt.figure()
+      plt.plot(recall, precision, marker=".")
+      num_thresholds_to_display = 5
+      threshold_indices = np.linspace(
+          0, len(thresholds) - 1, num_thresholds_to_display, dtype=int
+      )
+
+      for i in threshold_indices:
+          plt.annotate(
+              f"Thresh: {thresholds[i]:.2f}",
+              xy=(recall[i], precision[i]),
+              xytext=(recall[i] - 0.1, precision[i] + 0.02),
+              arrowprops={
+                  "facecolor": "black",
+                  "arrowstyle": "wedge,tail_width=0.7",
+                  "lw": 1,
+                  "alpha": 0.5,
+              },
+              fontsize=9,
+              color="black",
+          )
+
+      # plt.xlabel("Recall")
+      # plt.ylabel("Precision")
+      # plt.title("recision-Recall Curve")
+
+      from sklearn.metrics import roc_curve, auc
+
+      # Compute the ROC curve
+      fpr, tpr, thresholds = roc_curve(y_test, y_scores)
+      roc_auc = auc(fpr, tpr)
+
+      # Plot the ROC curve
+      plt.plot(fpr, tpr, label=f"ROC curve (AUC = {roc_auc:.2f})")
+      plt.xlabel("False Positive Rate")
+      plt.ylabel("True Positive Rate")
+      plt.title("ROC Curve")
+      plt.legend(loc="lower right")
+      plt.savefig("../img/precision-recall-roc-example.png")
+    #+end_src
+
+    [[./img/precision-recall-roc-example.png]]
+
+    The term "recall" is used for this metric because it measures the model's ability to "recall" or "remember" the true positive instances among all the actual positive instances (i.e., the fraction of true positives out of all actual positives). In other words, recall quantifies how well the model can identify the relevant cases in the dataset, hence the name.
+
 *** Baselines
-**** Evaluation metrics, by themselves, mean little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
+Evaluation metrics, by themselves, means little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
 - random baseline
 - simple heuristic baseline
 - zero rule baseline
@@ -1180,7 +1440,6 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 - If you only want to show the predictions that your model is certain about, how do you measure that certainty?
 **** slice-based evaluation
 - Slicing means to separate your data into subsets and look at your model’s performance on each subset separately.
-
 - heuristics-based
 - error analysis
 - slice finder
@@ -1215,22 +1474,14 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 - Logginga and monitoring
 - MLOps
 ** Unification of batch, online and stream processing
-Ref [fn:17]
 * Footnotes
-[fn:17]
-- https://arxiv.org/abs/2208.09827
-- https://arxiv.org/abs/1403.3375
 [fn:16]
 - https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning
 - https://huggingface.co/docs/transformers/v4.18.0/en/performance
 [fn:15]
 - https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions
 - [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
-[fn:14]
-- https://booking.ai/dont-be-tricked-by-the-hashing-trick-192a6aae3087
-- https://scikit-learn.org/stable/modules/feature_extraction.html#feature-hashing
-- https://web.archive.org/web/20120609232923/http://metaoptimize.com/qa/questions/6943/what-is-the-hashing-trick
-- https://arxiv.org/abs/2006.10739
+[fn:14] [[https://booking.ai/dont-be-tricked-by-the-hashing-trick-192a6aae3087][Don’t be tricked by the Hashing Trick | by Lucas Bernardi | Booking.com Data Science]]
 [fn:13] http://web.stanford.edu/class/cs246/
 [fn:12] https://stanford-cs329s.github.io/syllabus.html
 [fn:11]
@@ -1268,6 +1519,6 @@ https://arxiv.org/abs/2106.09685
 - [[https://web.stanford.edu/~rezab/classes/cme323/S20/][DAO: Distributed Algorithms and Optimization]]
 [fn:1]
 Chip Huyen, Designing Machine Learning Systems, p.138
-* Bibliography
+* References
 #+CITE_EXPORT: csl /Users/toeinriver/Desktop/ml-system-design/csl/ieee.csl
 #+print_bibliography:

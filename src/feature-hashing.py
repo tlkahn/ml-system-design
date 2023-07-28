@@ -1,5 +1,6 @@
-# [[file:../README.org::*Feature hashing][Feature hashing:1]]
+# [[file:../README.org::*Feature hashing][Feature hashing:2]]
 from sklearn.feature_extraction import FeatureHasher
+import numpy as np
 
 # Example input data
 data = [
@@ -16,4 +17,5 @@ hashed_data = hasher.transform(data)
 
 # Print the transformed features
 print(hashed_data.toarray())
-# Feature hashing:1 ends here
+print(np.array(hashed_data.toarray()).shape)
+# Feature hashing:2 ends here
