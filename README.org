@@ -2,6 +2,10 @@
 #+title: ML System Design Primer
 #+bibliography: bib/main.bib
 #+latex_header: \setlength{\parindent}{0pt}
+#+latex_header: \usepackage[margin=2.5cm]{geometry}
+#+latex_header: \usepackage{listings}
+#+latex_header: \usepackage{xcolor}
+#+LATEX_HEADER: \lstset{language=Python, basicstyle=\small\ttfamily, keywordstyle=\bfseries\color{blue}, commentstyle=\itshape\color[rgb]{0.133,0.545,0.133}, stringstyle=\color[rgb]{0.627,0.126,0.941}, showstringspaces=false, breaklines=true, frame=single, numbers=left, numberstyle=\tiny\color{gray}, stepnumber=1, numbersep=10pt, backgroundcolor=\color[rgb]{0.9,0.9,0.9}, tabsize=4, rulecolor=\color[rgb]{0.7,0.7,0.7}, captionpos=b, escapeinside={\%*}{*)}}
 * Scope and frame the question
 ** Loss function and metrics evaluations
 References [fn:15] [fn:12]
@@ -1084,7 +1088,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 ** Model compression
 ...three main approaches to reduce its inference latency: make it do inference faster, make the model smaller, or make the hardware it’s deployed on run faster. The process of making a model smaller is called model compression, and the process to make it do inference faster is called inference optimization.
 
-- Low-Rank Factorization: [fn:7] the key idea behind low-rank factorization is to replace high-dimensional tensors with lower-dimensional tensors. A Example: compact convolutional filters: where the over-parameterized (having too many parameters) convolution filters are replaced with compact blocks to both reduce the number of parameters and increase speed.
+- Low-Rank Factorization: [cite:@hu2021lora] the key idea behind low-rank factorization is to replace high-dimensional tensors with lower-dimensional tensors. A Example: compact convolutional filters: where the over-parameterized (having too many parameters) convolution filters are replaced with compact blocks to both reduce the number of parameters and increase speed.
 
 - Knowledge distillation: a method in which a small model (student) is trained to mimic a larger model or ensemble of models (teacher). The smaller model is what you’ll deploy.
 
@@ -1499,19 +1503,19 @@ Data distribution shift refers to the phenomenon in supervised learning when the
     + Two-sample hypothesis test: It’s a test to determine whether the difference between two popu‐ lations (two sets of data) is statistically significant. A caveat is that just because the difference is statistically significant doesn’t mean that it is practically important. A basic two-sample test is the Kolmogorov–Smirnov test, also known as the K-S or KS test. However it won’t work for high-dimensional data, and features are usually high-dimensional. Alibi Detect is a great open source package with the implementations of many drift detection algorithms, as shown below:
         | Detector                         | Tabular | Image | Time Series | Text | Categorical Features | Online | Feature Level |
         |----------------------------------+---------+-------+-------------+------+----------------------+--------+---------------|
-        | Kolmogorov-Smirnov               | ✔       | ✔     |             | ✔    | ✔                    |        | ✔             |
-        | Cramér-von Mises                 | ✔       | ✔     |             |      |                      | ✔      | ✔             |
-        | Fisher's Exact Test              | ✔       |       |             |      | ✔                    | ✔      | ✔             |
-        | Maximum Mean Discrepancy (MMD)   | ✔       | ✔     |             | ✔    | ✔                    | ✔      |               |
-        | Learned Kernel MMD               | ✔       | ✔     |             | ✔    | ✔                    |        |               |
-        | Context-aware MMD                | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
-        | Least-Squares Density Difference | ✔       | ✔     |             | ✔    | ✔                    | ✔      |               |
-        | Chi-Squared                      | ✔       |       |             |      | ✔                    |        | ✔             |
-        | Mixed-type tabular data          | ✔       |       |             |      | ✔                    |        | ✔             |
-        | Classifier                       | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
-        | Spot-the-diff                    | ✔       | ✔     | ✔           | ✔    | ✔                    |        | ✔             |
-        | Classifier Uncertainty           | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
-        | Regressor Uncertainty            | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
+        | Kolmogorov-Smirnov               | O       | O     |             | O    | O                    |        | O             |
+        | Cramér-von Mises                 | O       | O     |             |      |                      | O      | O             |
+        | Fisher's Exact Test              | O       |       |             |      | O                    | O      | O             |
+        | Maximum Mean Discrepancy (MMD)   | O       | O     |             | O    | O                    | O      |               |
+        | Learned Kernel MMD               | O       | O     |             | O    | O                    |        |               |
+        | Context-aware MMD                | O       | O     | O           | O    | O                    |        |               |
+        | Least-Squares Density Difference | O       | O     |             | O    | O                    | O      |               |
+        | Chi-Squared                      | O       |       |             |      | O                    |        | O             |
+        | Mixed-type tabular data          | O       |       |             |      | O                    |        | O             |
+        | Classifier                       | O       | O     | O           | O    | O                    |        |               |
+        | Spot-the-diff                    | O       | O     | O           | O    | O                    |        | O             |
+        | Classifier Uncertainty           | O       | O     | O           | O    | O                    |        |               |
+        | Regressor Uncertainty            | O       | O     | O           | O    | O                    |        |               |
   - Time scale windows for detecting shifts
     Temporal shifts are shifts that happen over time. To detect temporal shifts, a common approach is to treat input data to ML applications as time-series data. [cite:@ramanan2021realtime]
 *** Addressing data drift
@@ -1520,7 +1524,7 @@ Data distribution shift refers to the phenomenon in supervised learning when the
 - Retrain your model using the labeled data from the target distribution, which can mean retraining from scratch on both the old and new data or continuing training the existing model on new data. The latter approach is also called [[*Finetuning][fine-tuning]] (which is also applied in domain adaptation and transfer learning).
 - It’s possible to design your system to make it more robust to shifts. A system uses multiple features, and different features shift at different rates. When choosing features for your models, you might want to consider the trade-off between the performance and the stability of a feature.
 
-** Monitoring and observability
+** Monitoring and observability (instrumentation)
 * Footnotes
 [fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
 [fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
@@ -1541,18 +1545,11 @@ Data distribution shift refers to the phenomenon in supervised learning when the
 - https://www.kaggle.com/code/naiborhujosua/model-calibration
 - https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html
 - https://github.com/gpleiss/temperature_scaling
-[fn:9]
-- https://www.youtube.com/watch?v=Nw77sEAn_Js
-- https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26
-[fn:7]
-https://arxiv.org/abs/2106.09685
+[fn:9] [[https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26][How We Scaled Bert To Serve 1+ Billion Daily Requests on CPUs | by Quoc N. Le | Medium]]
 [fn:6]
 - [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]]
-- https://www.youtube.com/watch?v=YVU5wAA6Txoa
 - [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]]
-- https://www.youtube.com/watch?v=TPcXVJ1VSRI
 - https://github.com/huggingface/peft
-- https://www.youtube.com/playlist?list=PLJV_el3uVTsOK_ZK5L0Iv_EQoL1JefRL4
 [fn:5]
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
@@ -1560,8 +1557,6 @@ https://arxiv.org/abs/2106.09685
 [fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as - https://huggingface.co/docs/optimum/concept_guides/quantization
 - https://arxiv.org/abs/1906.00532
 - [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
-- https://www.youtube.com/watch?v=IPQmGzYuxmc
-- https://www.youtube.com/watch?v=c3MT2qV5f9w
 - https://www.kaggle.com/code/anilkrsah/model-quantization
 - https://www.kaggle.com/code/ritvik1909/model-quantization
 [fn:3]
