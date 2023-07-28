@@ -1463,7 +1463,29 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
 - Logginga and monitoring
 - MLOps
 ** Unification of batch, online and stream processing
+* Distribution shifts and monitoring
+** Degenerate feedback loops
+- popularity bias (exposure bias, filter bubbles and sometimes echo chambers) [cite:@Jiang_2019; @Chia_2022; @abdollahpouri2019managing; @fleder2007blockbuster; @brynjolfsson2011goodbye]
+- metrics: aggregate diversity, average coverage of long-tail items, bucket-based accuracy
+- countering measures:
+  + randomization
+    This is the approach that TikTok follows. Each new video is randomly assigned an initial pool of traffic (which can be up to hundreds of impressions). This pool of traffic is used to evaluate each video’s unbiased quality to determine whether it should be moved to a bigger pool of traffic or be marked as irrelevant. [fn:2]
+    There are some variations to improve on the accuracy loss: Contextual bandits [cite:@guo2020deep; @Li_2010] as an exploration strategy [fn:8]. [cite:@schnabel2016recommendations] uses a small amount of randomization and causal inference techniques to estimate the unbiased value of each song.
+  + positional/rank features (Google's Rule 36 [fn:17])
+  + Intention harvesting [cite:@Agarwal_2019; @Aslanyan_2019]
+    The key idea is that logged user engagement data in a matured ranking system already contains the ranks from multiple different ranking models, for example from historic A/B tests or simply from different versions of the production model that have been rolled out over time. This historic diversity creates an inherent randomness in ranks, which we can “harvest” to estimate position bias, without any costly interventions.
+** Other biases:
+- clickbait bias [fn:10] means that the model is biased in favor of clickbait content
+- duration bias means that the model is biased in favor of long videos (and against short videos)
+- popularity bias means that the model is biased in favor of popular content instead of the unique interests of a particular user
+- single-interest bias means that the model fails to learn multiple user interests at the same time
+- survivorship bias means that the model is biased in favor of content that has survived the filtering process
+
 * Footnotes
+[fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
+[fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
+[fn:8] [[https://en.wikipedia.org/wiki/Multi-armed_bandit][Multi-armed bandit - Wikipedia]]
+[fn:2] [[https://medium.com/p/7895bb1ab423][Why TikTok made its user so obsessive? The AI Algorithm that got you hooked. | by Catherine Wang | Towards Data Science]]
 [fn:16]
 - https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning
 - https://huggingface.co/docs/transformers/v4.18.0/en/performance
@@ -1495,8 +1517,7 @@ https://arxiv.org/abs/2106.09685
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
 - [[https://magazine.sebastianraschka.com/p/finetuning-llms-with-adapters][Finetuning LLMs Efficiently with Adapters]]
-[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as "fixed point."
-- https://huggingface.co/docs/optimum/concept_guides/quantization
+[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as - https://huggingface.co/docs/optimum/concept_guides/quantization
 - https://arxiv.org/abs/1906.00532
 - [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
 - https://www.youtube.com/watch?v=IPQmGzYuxmc
