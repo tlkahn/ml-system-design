@@ -1457,13 +1457,13 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
         return json.dumps({"y": y}), 200
     #+end_src
 - Hard parts:
-- Latency
-- Throughput
-- Uptime
-- Logginga and monitoring
-- MLOps
+  + Latency
+  + Throughput
+  + Uptime
+  + Logginga and monitoring
+  + MLOps
 ** Unification of batch, online and stream processing
-* Distribution shifts and monitoring
+* Data Distribution shifts and monitoring
 ** Degenerate feedback loops
 - popularity bias (exposure bias, filter bubbles and sometimes echo chambers) [cite:@Jiang_2019; @Chia_2022; @abdollahpouri2019managing; @fleder2007blockbuster; @brynjolfsson2011goodbye]
 - metrics: aggregate diversity, average coverage of long-tail items, bucket-based accuracy
@@ -1474,13 +1474,53 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
   + positional/rank features (Google's Rule 36 [fn:17])
   + Intention harvesting [cite:@Agarwal_2019; @Aslanyan_2019]
     The key idea is that logged user engagement data in a matured ranking system already contains the ranks from multiple different ranking models, for example from historic A/B tests or simply from different versions of the production model that have been rolled out over time. This historic diversity creates an inherent randomness in ranks, which we can “harvest” to estimate position bias, without any costly interventions.
-** Other biases:
-- clickbait bias [fn:10] means that the model is biased in favor of clickbait content
-- duration bias means that the model is biased in favor of long videos (and against short videos)
-- popularity bias means that the model is biased in favor of popular content instead of the unique interests of a particular user
-- single-interest bias means that the model fails to learn multiple user interests at the same time
-- survivorship bias means that the model is biased in favor of content that has survived the filtering process
+- Other biases:
+    + clickbait bias [fn:10] means that the model is biased in favor of clickbait content
+    + duration bias means that the model is biased in favor of long videos (and against short videos)
+    + popularity bias means that the model is biased in favor of popular content instead of the unique interests of a particular user
+    + single-interest bias means that the model fails to learn multiple user interests at the same time
+    + survivorship bias means that the model is biased in favor of content that has survived the filtering process
+** Data distribution shifts
+Data distribution shift refers to the phenomenon in supervised learning when the data a model works with changes over time, which causes this model’s predictions to become less accurate as time passes. The distri‐ bution of the data the model is trained on is called the source distribution. The distribution of the data the model runs inference on is called the target distribution.
+*** Types
+- covariate shift
+  When P(X) changes but P(Y|X) remains the same.
+- label shift
+  When P(Y) changes but P(X|Y) remains the same.
+- concept drift
+  When P(Y|X) changes but P(X) remains the same.
+- feature change
+- Label schema change
+*** Detecting Data Distribution Shifts
+- Monitoring metrics in production. Need access to ground truth labels which is typically delayed.
+- When no access to labels, use proxies. The distributions of interest are the input distribution $P(X)$, the label distribution $P(Y)$, and the conditional distributions $P(X|Y)$ and $P(Y|X)$. In the industry, most drift detection methods focus on detecting changes in the input distribution, especially the distributions of features.
+  - Statistical methods
+    + Simple statistics: compare their statistics like min, max, mean, median, variance, various quantiles (such as 5th, 25th, 75th, or 95th quantile), skewness, kurtosis.
+    + Two-sample hypothesis test: It’s a test to determine whether the difference between two popu‐ lations (two sets of data) is statistically significant. A caveat is that just because the difference is statistically significant doesn’t mean that it is practically important. A basic two-sample test is the Kolmogorov–Smirnov test, also known as the K-S or KS test. However it won’t work for high-dimensional data, and features are usually high-dimensional. Alibi Detect is a great open source package with the implementations of many drift detection algorithms, as shown below:
+        | Detector                         | Tabular | Image | Time Series | Text | Categorical Features | Online | Feature Level |
+        |----------------------------------+---------+-------+-------------+------+----------------------+--------+---------------|
+        | Kolmogorov-Smirnov               | ✔       | ✔     |             | ✔    | ✔                    |        | ✔             |
+        | Cramér-von Mises                 | ✔       | ✔     |             |      |                      | ✔      | ✔             |
+        | Fisher's Exact Test              | ✔       |       |             |      | ✔                    | ✔      | ✔             |
+        | Maximum Mean Discrepancy (MMD)   | ✔       | ✔     |             | ✔    | ✔                    | ✔      |               |
+        | Learned Kernel MMD               | ✔       | ✔     |             | ✔    | ✔                    |        |               |
+        | Context-aware MMD                | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
+        | Least-Squares Density Difference | ✔       | ✔     |             | ✔    | ✔                    | ✔      |               |
+        | Chi-Squared                      | ✔       |       |             |      | ✔                    |        | ✔             |
+        | Mixed-type tabular data          | ✔       |       |             |      | ✔                    |        | ✔             |
+        | Classifier                       | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
+        | Spot-the-diff                    | ✔       | ✔     | ✔           | ✔    | ✔                    |        | ✔             |
+        | Classifier Uncertainty           | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
+        | Regressor Uncertainty            | ✔       | ✔     | ✔           | ✔    | ✔                    |        |               |
+  - Time scale windows for detecting shifts
+    Temporal shifts are shifts that happen over time. To detect temporal shifts, a common approach is to treat input data to ML applications as time-series data. [cite:@ramanan2021realtime]
+*** Addressing data drift
+- Train models using massive datasets. The hope here is that if the training dataset is large enough, the model will be able to learn such a comprehensive distribution that whatever data points the model will encounter in production will likely come from this distribution.
+- Adapt a trained model to a target distribution without requiring new labels. [cite:@pmlr-v97-zhao19a; @lipton2018detecting; @10.5555/3042817.3043028] Haven’t found wide adoption in industry.
+- Retrain your model using the labeled data from the target distribution, which can mean retraining from scratch on both the old and new data or continuing training the existing model on new data. The latter approach is also called [[*Finetuning][fine-tuning]] (which is also applied in domain adaptation and transfer learning).
+- It’s possible to design your system to make it more robust to shifts. A system uses multiple features, and different features shift at different rates. When choosing features for your models, you might want to consider the trade-off between the performance and the stability of a feature.
 
+** Monitoring and observability
 * Footnotes
 [fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
 [fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
