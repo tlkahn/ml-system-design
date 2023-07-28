@@ -3,6 +3,12 @@
 import pandas as pd
 
 # Load data
+df = pd.DataFrame(
+    {
+        "Date": ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04"],
+        "Stock_Price": [100, 101, 102, 103],
+    }
+)
 data = pd.read_csv("stock_prices.csv")
 data["Date"] = pd.to_datetime(data["Date"])
 
@@ -21,13 +27,12 @@ test_data = sorted_data[800:]
 # Target leakage
 from sklearn.model_selection import train_test_split
 
-# Load data
 data = pd.read_csv("cancer_data.csv")
 
 # Incorrect: Including target-related feature
-X = data[["Age", "Gender", "Tumor_Size", "Treatment"]]
-y = data["Cancer"]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# X = data[["Age", "Gender", "Tumor_Size", "Treatment"]]
+# y = data["Cancer"]
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 # Correct: Excluding target-related feature
 X = data[["Age", "Gender", "Tumor_Size"]]
@@ -45,11 +50,10 @@ X = data.drop("target", axis=1)
 y = data["target"]
 
 # Incorrect: Scaling before splitting, leaking global and test statistics to train data
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
+# scaler = StandardScaler()
+# X_scaled = scaler.fit_transform(X)
+# X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
 
-# Correct: Scaling after splitting
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)

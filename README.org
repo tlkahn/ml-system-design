@@ -130,14 +130,9 @@ Some real-world examples include:
 #+end_src
 
 ** Cross feature
-In machine learning, a cross feature, also known as an interaction
-feature or interaction term, is a new feature that represents the
-interaction or combination of multiple existing features. It captures
-the relationship between different features and can provide additional
-information for the model.
+In machine learning, a cross feature, also known as an interaction feature or interaction term, is a new feature that represents theinteraction or combination of multiple existing features. It capturesthe relationship between different features and can provide additionalinformation for the model.
 
-Here's an example of how to create cross features using the scikit-learn
-library:
+Here's an example of how to create cross features using the scikit-learn library:
 
 #+begin_src python :tangle src/cross-feature.py :comments link
   from sklearn.preprocessing import PolynomialFeatures
@@ -159,22 +154,12 @@ library:
   reg.coef_
 #+end_src
 
-In the above example, we use the =PolynomialFeatures= class from
-scikit-learn. The =degree= parameter specifies the maximum degree of
-interaction terms to be generated. By setting =interaction_only=True=,
-we only generate interaction terms without including the individual
-features raised to powers. The =include_bias=False= parameter excludes
-the bias term from the generated cross features.
+In the above example, we use the =PolynomialFeatures= class from scikit-learn. The =degree= parameter specifies the maximum degree of interaction terms to be generated. By setting =interaction_only=True=, we only generate interaction terms without including the individual features raised to powers. The =include_bias=False= parameter excludes the bias term from the generated cross features.
 
-The =fit_transform()= method of the =PolynomialFeatures= object
-generates the cross features for the input data =X= and returns the
-transformed data =X_cross=. We can then use these cross features to
-train a machine learning model, such as =LinearRegression= in this case.
+The =fit_transform()= method of the =PolynomialFeatures= object generates the cross features for the input data =X= and returns the transformed data =X_cross=. We can then use these cross features to train a machine learning model, such as =LinearRegression= in this case.
 
-Note that cross features can help capture non-linear relationships or
-interactions between features, but they can also increase the
-dimensionality of the data, potentially leading to overfitting if not
-used carefully.
+Note that cross features can help capture non-linear relationships or interactions between features, but they can also increase the dimensionality of the data, potentially leading to overfitting if not used carefully.
+
 ** Embedding
 *** word2vec
 **** CBOW
@@ -591,6 +576,12 @@ Data leakage is when information from the target variable or future data uninten
      import pandas as pd
 
      # Load data
+     df = pd.DataFrame(
+         {
+             "Date": ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04"],
+             "Stock_Price": [100, 101, 102, 103],
+         }
+     )
      data = pd.read_csv("stock_prices.csv")
      data["Date"] = pd.to_datetime(data["Date"])
 
@@ -609,13 +600,12 @@ Data leakage is when information from the target variable or future data uninten
      # Target leakage
      from sklearn.model_selection import train_test_split
 
-     # Load data
      data = pd.read_csv("cancer_data.csv")
 
      # Incorrect: Including target-related feature
-     X = data[["Age", "Gender", "Tumor_Size", "Treatment"]]
-     y = data["Cancer"]
-     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+     # X = data[["Age", "Gender", "Tumor_Size", "Treatment"]]
+     # y = data["Cancer"]
+     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
      # Correct: Excluding target-related feature
      X = data[["Age", "Gender", "Tumor_Size"]]
@@ -633,11 +623,10 @@ Data leakage is when information from the target variable or future data uninten
       y = data["target"]
 
       # Incorrect: Scaling before splitting, leaking global and test statistics to train data
-      scaler = StandardScaler()
-      X_scaled = scaler.fit_transform(X)
-      X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
+      # scaler = StandardScaler()
+      # X_scaled = scaler.fit_transform(X)
+      # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
 
-      # Correct: Scaling after splitting
       X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
       scaler = StandardScaler()
       X_train = scaler.fit_transform(X_train)

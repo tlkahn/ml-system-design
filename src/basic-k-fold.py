@@ -4,6 +4,7 @@ from sklearn import model_selection
 from sklearn.utils import Bunch
 from sklearn import datasets
 
+# Training data is in a CSV file called train.csv
 iris_data = datasets.load_iris()
 # df.keys()
 # dict_keys(['data', 'target', 'frame', 'target_names', 'DESCR',
