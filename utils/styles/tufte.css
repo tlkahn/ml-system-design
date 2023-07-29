@@ -8,8 +8,7 @@ html {
 body {
     width: 80%;
     margin-left: 2%;
-    font-family: Arial, "Book Antiqua", Georgia, serif;
-    background-color: #fffff8
+    font-family: system-ui, sans-serif;
     color: #111;
     counter-reset: sidenote-counter;
     overflow-x: hidden;

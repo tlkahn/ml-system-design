@@ -1,4 +1,5 @@
 #+HTML_HEAD: <link rel="stylesheet" href="./utils/styles/tufte.css" type="text/css" />
+#+HTML_HEAD: <style type="text/css>#content{margin: 0;}</style>
 #+title: ML System Design Primer
 #+bibliography: bib/main.bib
 #+latex_header: \setlength{\parindent}{0pt}
@@ -6,7 +7,6 @@
 #+latex_header: \usepackage{listings}
 #+latex_header: \usepackage{xcolor}
 #+LATEX_HEADER: \lstset{language=Python, basicstyle=\small\ttfamily, keywordstyle=\bfseries\color{blue}, commentstyle=\itshape\color[rgb]{0.133,0.545,0.133}, stringstyle=\color[rgb]{0.627,0.126,0.941}, showstringspaces=false, breaklines=true, frame=single, numbers=left, numberstyle=\tiny\color{gray}, stepnumber=1, numbersep=10pt, backgroundcolor=\color[rgb]{0.9,0.9,0.9}, tabsize=4, rulecolor=\color[rgb]{0.7,0.7,0.7}, captionpos=b, escapeinside={\%*}{*)}}
-#+HTML_HEAD: <style type="text/css">#content{margin: 0;}</style>
 * Scope and frame the question
 ** Loss function and metrics evaluations
 References [fn:15] [fn:12]
@@ -1413,7 +1413,7 @@ F1, precision, and recall are asymmetric metrics because they don't treat false 
     The term "recall" is used for this metric because it measures the model's ability to "recall" or "remember" the true positive instances among all the actual positive instances (i.e., the fraction of true positives out of all actual positives). In other words, recall quantifies how well the model can identify the relevant cases in the dataset, hence the name.
 
 *** Baselines
-Evaluation metrics, by themselves, means little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against.
+Evaluation metrics, by themselves, means little. When evaluating your model, it’s essential to know the baseline you’re evaluating it against. A lift chart can help you understand how your model compares to a baseline. [fn:20]
 - random baseline
 - simple heuristic baseline
 - zero rule baseline
@@ -1421,19 +1421,19 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
 - human baseline
 - existing solutions
 *** Methods
-**** perturbation tests
+**** Perturbation tests
 - The more sensitive your model is to noise, the harder it will be to maintain it.
-**** invariance tests
+**** Invariance tests
 - Excluding sensitive information or adding/removing/changing irrelavant dimensions should not affect the predictions.
-**** directional expectation tests
+**** Directional expectation tests
 - Models with changed data in dimensions should not generate predictions with directions against common sense.
-**** model calibration
+**** Model calibration
 - If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
 - To measure a model’s calibration [fn:11], a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
-- To calibrate your models, a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
-**** confidence measurement
+- To calibrate your models [cite:@10.1371/journal.pone.0262838], a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
+**** Confidence measurement
 - If you only want to show the predictions that your model is certain about, how do you measure that certainty?
-**** slice-based evaluation
+**** Slice-based evaluation
 - Slicing means to separate your data into subsets and look at your model’s performance on each subset separately.
 - heuristics-based
 - error analysis
@@ -1533,13 +1533,27 @@ Core ask: How often should I retrain my models? The rational for /test in produc
 - Champion/Challenger model [fn:18]
   [[./img/champion-challenger.png]]
 - Stateless retraining vs Stateful training
+  Most companies do stateless retraining—the model is trained from scratch each time. Continual learning means also allowing stateful training—the model continues training on new data.2 Stateful training is also known as fine-tuning or incremental learning.
+- Four stages:
+  + Manual, stateless retraining
+  + Automated retraining
+  + Automated, stateful training
+  + Continual learning
+- How often to update your models
+- Shadow deployment
+- A/B testing
+- Canary release
+- Interleaving experiments
+  What if instead of exposing a user to recommendations from a model, we expose that user to recommendations from both models and see which model’s recommendations they will click on? That’s the idea behind interleaving experiments.
+- Bandits
+  Bandit algorithms originated in gambling. A casino has multiple slot machines with different payouts. A slot machine is also known as a one-armed bandit, hence the name. Multi-armed bandits are algorithms that allow you to balance between exploitation (choosing the slot machine that has paid the most in the past) and exploration (choosing other slot machines that may pay off even more).
+
 
 
 * Footnotes
-
+[fn:20] [[https://www.listendata.com/2014/08/excel-template-gain-and-lift-charts.html][Understand Gain and Lift Charts]]
 [fn:19] Continual learning is largely an infrastructural problem.
 [fn:18] [[https://blog.dataiku.com/mlops-champion-challenger-model-evaluation][MLOps: Champion/Challenger Model Evaluation in Dataiku]], [[https://medium.com/decision-automation/what-is-champion-challenger-and-how-does-it-enable-choosing-the-right-decision-f57b8b653149][What is Champion Challenger and How does It Enable Choosing the Right Decision? | by Arash Aghlara | FlexRule Decision Automation | Medium]]
-
 [fn:7] Vowpal Wabbit is a machine learning library that was developed by John Langford and his research team at Yahoo! Research and later Microsoft Research. The name "Vowpal Wabbit" is a playful corruption of the words "vorpal rabbit," which is a reference to the poem "Jabberwocky" by Lewis Carroll. In the poem, the word "vorpal" is a nonsensical adjective, and "rabbit" is a small mammal. In the context of the machine learning library, "Vowpal Wabbit" doesn't have a specific verbal meaning but serves as a whimsical name for the project.
 [fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
 [fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
@@ -1555,6 +1569,8 @@ Core ask: How often should I retrain my models? The rational for /test in produc
 [fn:13] http://web.stanford.edu/class/cs246/
 [fn:12] https://stanford-cs329s.github.io/syllabus.html
 [fn:11]
+- [[https://towardsdatascience.com/a-comprehensive-guide-on-model-calibration-part-1-of-4-73466eb5e09a][A Comprehensive Guide on Model Calibration: What, When, and How | by Raj Sangani | Towards Data Science]]
+- [[https://scikit-learn.org/stable/auto_examples/calibration/plot_compare_calibration.html#sphx-glr-auto-examples-calibration-plot-compare-calibration-py][Comparison of Calibration of Classifiers — scikit-learn 1.3.0 documentation]]
 - https://huggingface.co/spaces/merve/uncertainty-calibration
 - https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration
 - https://www.kaggle.com/code/naiborhujosua/model-calibration
