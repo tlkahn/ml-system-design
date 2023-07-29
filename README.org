@@ -1,4 +1,4 @@
-#+html_head: <link rel="stylesheet" href="https://sandyuraz.com/styles/org.css">
+#+HTML_HEAD: <link rel="stylesheet" href="./utils/styles/tufte.css" type="text/css" />
 #+title: ML System Design Primer
 #+bibliography: bib/main.bib
 #+latex_header: \setlength{\parindent}{0pt}
@@ -6,6 +6,7 @@
 #+latex_header: \usepackage{listings}
 #+latex_header: \usepackage{xcolor}
 #+LATEX_HEADER: \lstset{language=Python, basicstyle=\small\ttfamily, keywordstyle=\bfseries\color{blue}, commentstyle=\itshape\color[rgb]{0.133,0.545,0.133}, stringstyle=\color[rgb]{0.627,0.126,0.941}, showstringspaces=false, breaklines=true, frame=single, numbers=left, numberstyle=\tiny\color{gray}, stepnumber=1, numbersep=10pt, backgroundcolor=\color[rgb]{0.9,0.9,0.9}, tabsize=4, rulecolor=\color[rgb]{0.7,0.7,0.7}, captionpos=b, escapeinside={\%*}{*)}}
+#+HTML_HEAD: <style type="text/css">#content{margin: 0;}</style>
 * Scope and frame the question
 ** Loss function and metrics evaluations
 References [fn:15] [fn:12]
@@ -60,13 +61,13 @@ References [fn:13]
 ** Mean encoding
 Mean encoding, also known as target encoding or likelihood encoding, is a technique used in machine learning to convert categorical variables into numerical representations. It involves replacing each category in a variable with the mean (or some other statistical measure) of the target variable for that category. This encoding can help capture the relationship between the categorical variable and the target variable, improving the performance of certain machine learning models.
 ** Feature hashing
-Feature hashing [fn:14], also known as the hashing trick [cite:@freksen2018fully; @weinberger2010feature], is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency.
+Feature hashing [fn:14], also known as the hashing trick [cite:@freksen2018fully;@weinberger2010feature], is a technique used in machine learning to convert categorical or text features into numerical representations. It involves applying a hash function to the input features, which assigns them to a fixed number of buckets or bins. Each bin represents a unique combination of features, and the value in each bin is typically the count or frequency of that combination in the dataset. Feature hashing is useful when dealing with high-dimensional or sparse feature spaces, as it reduces the dimensionality of the data and can improve computational efficiency. It is also a core component for out-of-core support for libraries like Vowpal Wabbit [fn:7] and Tensorflow.
 
 Some real-world examples include:
 
 1. Text Classification: In natural language processing tasks like sentiment analysis or spam detection, feature hashing can be used to convert text features (such as words or n-grams) into numerical representations. This allows machine learning models to learn patterns and make predictions based on the hashed features.
 
-2. Recommender Systems: Feature hashing can be used to handle high-dimensional categorical features, such as user or item IDs, in recommender systems. By converting these categorical features into numerical representations, feature hashing enables efficient computation and storage of large-scale recommendation models.
+2. Recommender Systems [cite:@wu2023survey;@Fan2023RecommenderSI;@Wang2023GenerativeRT;@Liu2023PretrainPA]: Feature hashing can be used to handle high-dimensional categorical features, such as user or item IDs, in recommender systems. By converting these categorical features into numerical representations, feature hashing enables efficient computation and storage of large-scale recommendation models.
 
 3. Click-through Rate (CTR) Prediction: In online advertising, feature hashing can be employed to handle the high-cardinality categorical features present in user demographics, ad properties, or context. By hashing these features, it reduces the dimensionality and allows for faster model training and prediction in CTR prediction models. Here is an example:
 
@@ -111,27 +112,28 @@ Some real-world examples include:
 
 4. Fraud Detection: Feature hashing can be used to convert categorical features related to transactions, user behavior, or device information into numerical representations for fraud detection models. This helps capture patterns and relationships between features, enabling the model to detect fraudulent activities.
 
-#+begin_src python :tangle src/feature-hashing.py :comments link
-  from sklearn.feature_extraction import FeatureHasher
-  import numpy as np
+    #+begin_src python :tangle src/feature-hashing.py :comments link
+    from sklearn.feature_extraction import FeatureHasher
+    import numpy as np
 
-  # Example input data
-  data = [
-      {"color": "red", "shape": "circle"},
-      {"color": "blue", "shape": "triangle"},
-      {"color": "green", "shape": "square"},
-  ]
+    # Example input data
+    data = [
+        {"color": "red", "shape": "circle"},
+        {"color": "blue", "shape": "triangle"},
+        {"color": "green", "shape": "square"},
+    ]
 
-  # Create a FeatureHasher object
-  hasher = FeatureHasher(n_features=20, input_type="dict")
+    # Create a FeatureHasher object
+    hasher = FeatureHasher(n_features=20, input_type="dict")
 
-  # Transform the data
-  hashed_data = hasher.transform(data)
+    # Transform the data
+    hashed_data = hasher.transform(data)
 
-  # Print the transformed features
-  print(hashed_data.toarray())
-  print(np.array(hashed_data.toarray()).shape)
-#+end_src
+    # Print the transformed features
+    print(hashed_data.toarray())
+    print(np.array(hashed_data.toarray()).shape)
+    #+end_src
+
 
 ** Cross feature
 In machine learning, a cross feature, also known as an interaction feature or interaction term, is a new feature that represents theinteraction or combination of multiple existing features. It capturesthe relationship between different features and can provide additionalinformation for the model.
@@ -1024,7 +1026,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 *** Data Spilling/CPU offloading across the memory hierarchy
 *** Memory efficient data representations
 ** Finetuning
-  Fine-tuning [fn:6], especially in the context of modern deep learning models [cite:@lialin2023scaling], refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
+  Fine-tuning [fn:6], especially in the context of modern deep learning models [cite:@lialin2023scaling; @dutt2023parameterefficient; @liao2023parameterefficient; @chung2022scaling; @lv2023parameter], refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
 
   Fine-tuning typically involves the following steps:
 
@@ -1525,7 +1527,20 @@ Data distribution shift refers to the phenomenon in supervised learning when the
 - It’s possible to design your system to make it more robust to shifts. A system uses multiple features, and different features shift at different rates. When choosing features for your models, you might want to consider the trade-off between the performance and the stability of a feature.
 
 ** Monitoring and observability (instrumentation)
+* Test in production
+Core ask: How often should I retrain my models? The rational for /test in production/: This process is a way to test your systems with live data in production to ensure that your updated model indeed works without catastrophic consequences. [fn:19]
+** Continual learning
+- Champion/Challenger model [fn:18]
+  [[./img/champion-challenger.png]]
+- Stateless retraining vs Stateful training
+
+
 * Footnotes
+
+[fn:19] Continual learning is largely an infrastructural problem.
+[fn:18] [[https://blog.dataiku.com/mlops-champion-challenger-model-evaluation][MLOps: Champion/Challenger Model Evaluation in Dataiku]], [[https://medium.com/decision-automation/what-is-champion-challenger-and-how-does-it-enable-choosing-the-right-decision-f57b8b653149][What is Champion Challenger and How does It Enable Choosing the Right Decision? | by Arash Aghlara | FlexRule Decision Automation | Medium]]
+
+[fn:7] Vowpal Wabbit is a machine learning library that was developed by John Langford and his research team at Yahoo! Research and later Microsoft Research. The name "Vowpal Wabbit" is a playful corruption of the words "vorpal rabbit," which is a reference to the poem "Jabberwocky" by Lewis Carroll. In the poem, the word "vorpal" is a nonsensical adjective, and "rabbit" is a small mammal. In the context of the machine learning library, "Vowpal Wabbit" doesn't have a specific verbal meaning but serves as a whimsical name for the project.
 [fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
 [fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
 [fn:8] [[https://en.wikipedia.org/wiki/Multi-armed_bandit][Multi-armed bandit - Wikipedia]]
@@ -1546,10 +1561,7 @@ Data distribution shift refers to the phenomenon in supervised learning when the
 - https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html
 - https://github.com/gpleiss/temperature_scaling
 [fn:9] [[https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26][How We Scaled Bert To Serve 1+ Billion Daily Requests on CPUs | by Quoc N. Le | Medium]]
-[fn:6]
-- [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]]
-- [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]]
-- https://github.com/huggingface/peft
+[fn:6] [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]], [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]], https://github.com/huggingface/peft, [[https://lightning.ai/blog/how-to-finetune-gpt-like-large-language-models-on-a-custom-dataset/][How To Finetune GPT Like Large Language Models on a Custom Dataset - Lightning AI]], [[https://lightning.ai/pages/community/article/lora-llm/][Parameter-Efficient LLM Finetuning With Low-Rank Adaptation (LoRA) - Lightning AI]]
 [fn:5]
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
