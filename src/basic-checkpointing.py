@@ -1,4 +1,4 @@
-# [[file:../README.org::*Architecture parallelism][Architecture parallelism:1]]
+# [[file:../README.org::*Checkpointing][Checkpointing:1]]
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -37,4 +37,4 @@ loss = checkpoint["loss"]
 
 model.train()  # Set the model in train mode
 # Continue training...
-# Architecture parallelism:1 ends here
+# Checkpointing:1 ends here

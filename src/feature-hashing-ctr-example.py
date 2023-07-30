@@ -1,4 +1,4 @@
-# [[file:README.org::*Feature hashing][Feature hashing:1]]
+# [[file:../README.org::*Feature hashing][Feature hashing:1]]
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split

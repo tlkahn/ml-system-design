@@ -1,5 +1,3 @@
-#+HTML_HEAD: <link rel="stylesheet" href="./utils/styles/tufte.css" type="text/css" />
-#+HTML_HEAD: <style type="text/css>#content{margin: 0;}</style>
 #+title: ML System Design Primer
 #+bibliography: bib/main.bib
 #+latex_header: \setlength{\parindent}{0pt}
@@ -71,7 +69,7 @@ Some real-world examples include:
 
 3. Click-through Rate (CTR) Prediction: In online advertising, feature hashing can be employed to handle the high-cardinality categorical features present in user demographics, ad properties, or context. By hashing these features, it reduces the dimensionality and allows for faster model training and prediction in CTR prediction models. Here is an example:
 
-   #+begin_src python :tangle feature-hashing-ctr-example.py :comments link
+   #+begin_src python :tangle src/feature-hashing-ctr-example.py :comments link
      from sklearn.feature_extraction import FeatureHasher
      from sklearn.linear_model import LogisticRegression
      from sklearn.model_selection import train_test_split
@@ -193,6 +191,7 @@ The word embeddings for the context words are averaged or summed up, and then pa
 The output layer of the CBOW model predicts the target word using softmax or another activation function. The predicted target word is compared to the actual target word, and the model is trained to minimize the prediction error.
 
 CBOW is commonly used in word2vec, a popular word embedding technique. It is efficient and works well when the target word can be accurately predicted based on the surrounding context words.
+
 #+begin_src python :tangle src/cbow.py :comments link
   import numpy as np
 
@@ -963,15 +962,34 @@ The process of tracking the progress and results of an experiment is called expe
 - System performance metrics such as memory usage and CPU/GPU utilization.
 - The values over time of any parameter and hyperparameter whose changes can affect your model’s performance, such as the learning rate if you use a learning rate schedule; gradient norms (both globally and per layer) etc.
 ** Distributed Training
-Some directions based on [cite:@nagrecha2023systems] include rematerialization[cite:@checkpointing2016], data spilling/CPU offloading [cite:@zero2019; @zero2021; @hydra2021; @mpms2021; @swapadvisor2021; @l2l2020], pipeline/model parallelism[cite:@gpipe2018; @pipedream2018; @terapipe2021; @torchgpipe2020; @megatronlmgpuscaling2021], and hybrid parallelism[cite:@flexflow2018; @alpa2022; @hydra2021; @mpms2021; @gshard2020]. These subjects, falling under the general umbrella of "large-model training techniques", has become a key focus for researchers across industry and academia, but the sheer volume of work in the space has made this topic difficult to navigate. This paper will provide a comprehensive review of the current state of the large-model DL training systems space, along with an assessment of future directions of growth and development in the area.
-*** Rematerialization
-*** Architecture parallelism
-- data parallelism [fn:3]
-- model parallelism
-- pipeline parallelism
-- hybrid parallelism
-- Checkpointing
+Some directions based on [cite:@nagrecha2023systems] include rematerialization[cite:@checkpointing2016], data spilling across memory hierarchy/CPU offloading [cite:@zero2019; @zero2021; @hydra2021; @mpms2021; @swapadvisor2021; @l2l2020], pipeline/model parallelism[cite:@gpipe2018; @pipedream2018; @terapipe2021; @torchgpipe2020; @megatronlmgpuscaling2021], memory-efficient data representations, and hybrid parallelism [cite:@flexflow2018; @alpa2022; @hydra2021; @mpms2021; @gshard2020].
+*** Challenges
+- Memory Scalability
+- Performance
+- Cost of training
+*** Parallelism
+- Model parallelism
+  Model parallelism refers to the technique of partitioning, or sharding, a neural architecture graph into subgraphs, and assigning each subgraph, or model shard, to a different device. In a feedforward network, these shards might refer to groups of stacked layers. This offers no advantage of parallel execustion but solves the memory constraint.
 
+  Model parallelism of any sort introduces GPU-GPU communication. To avoid having to transfer too much data over slow interconnects, model parallelism users generally aim to select a partitioning strategy that will minimize the size of activations that need to be transferred between shards, or else balance out computation to hide communication costs.
+
+  Various sharding algorithms exist for this: for example, the Megatron-LM paper [cite:@megatronlmgpuscaling2021] describes a method for partitioning a Transformer architecture into shards that minimizes the number of activations that need to be communicated between shards (also see [fn:24]), while the GPipe paper [cite:@gpipe2018] describes a method for partitioning a feedforward network into shards that balances computation and communication costs.
+
+  Core DL algorithms such as SGD are considered to run in parallelism as well. [fn:27]
+- Data parallelism [fn:3]
+  This enables multiple mini-batches of data to be consumed in parallel. Data parallel execution techniques can be divided into two broad categories — asynchronous data parallelism and synchronous data parallelism.
+  + asynchronous:
+    The most well-known asynchronous technique is Parameter Server, wherein one core chief server holds a baseline set of pa- rameters while distributed workers hold model replicas that train on different mini-batches. The distributed workers occasionally send updates to the baseline server, which in turn will send out replacement parameters to the distributed workers to keep them updated. Asynchronous techniques are generally being phased out in favor of synchronous techniques in the modern DL training landscape.
+  + synchronous
+    The most popular synchronous data parallel execution technique is Distributed Data Parallelism (DDP) [fn:25]. DDP replicates a model and assigns copies to different accelerators. An initial “global mini- batch” is taken in, then partitioned evenly across the replicas to to produce local gradient updates for each replica. These gradients are then aggregated across replicas to produce a global update, typically using an all-reduce communication pattern.
+  + All-gather and all-reduce
+*** Large Model Architectures
+**** Depth-wise scaling
+  Most commonly needed for long, sequential chain architectures e.g. Transformers [fn:26].
+**** Width-wise scaling
+  Commonly used for very wide, easily parallelized operators e.g. embedding table lookups [cite:@acun2020understanding]. Embedding tables and recommender models make up an outsized proportion of DL workloads — Meta reports that 50% of their DL training cycles are spent on embedding-table-based recommender models
+**** Example scaling
+**** Checkpointing
   Checkpointing in machine learning refers to the practice of periodically saving the state of a model during its training process. It usually involves storing the model's weights and other relevant information, such as optimizer state and training progress (i.e., the current epoch or iteration). Checkpointing serves several purposes:
 
   1. **Fault tolerance**: Training deep learning models can be a time-consuming and computationally expensive process. If the training process is interrupted due to hardware failure, software crash, or other issues, checkpointing allows you to resume training from the last saved state, avoiding the need to restart from scratch.
@@ -1023,8 +1041,87 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
       model.train()  # Set the model in train mode
       # Continue training...
     #+end_src
-*** Data Spilling/CPU offloading across the memory hierarchy
-*** Memory efficient data representations
+*** Training systems
+**** Basic approaches
+- Rematerialization, aka gradient checkpointing [fn:28], attempts to minimize the memory demands of backpropagation specifically [cite:@checkpointing2016;@checkpointing2000;].
+  Rematerialization trades compute for memory by initially discarding most of the activations except for a few checkpoints, then recomputing the discarded during backpropagation using the checkpoints. Checkpointing is critical to techniques such as [[*Pipeline parallelism][Pipeline parallelism]] and shard alternator parallelism.
+- Accumulation. Accumulation [cite:@torchgpipe2020; @gpipe2018] delays the application of these aggregated gradients, instead computing new mini-batch-gradient-updates and accumulating them onto our aggregated gradient vectors. The new gradient is now the aggregated sum of 2 mini-batch updates, rather than 1. In this way, we can scale up our effective mini-batch size and gradient impact without actually training a larger batch. We refer to the smaller, individual batches as microbatches, and keep referring to the effective summed batch as the mini-batch. Accumulation is essential to pipeline parallelism, and is often used in conjunction with other techniques.
+
+  #+begin_src python :tangle src/basic-accumulation-example.py :comments link
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    import torchvision.datasets as datasets
+    import torchvision.transforms as transforms
+    from torch.utils.data import DataLoader
+
+
+    # Define the neural network model
+    class SimpleNet(nn.Module):
+        def __init__(self):
+            super(SimpleNet, self).__init__()
+            self.fc1 = nn.Linear(28 * 28, 128)
+            self.fc2 = nn.Linear(128, 64)
+            self.fc3 = nn.Linear(64, 10)
+
+        def forward(self, x):
+            x = x.view(-1, 28 * 28)
+            x = torch.relu(self.fc1(x))
+            x = torch.relu(self.fc2(x))
+            x = self.fc3(x)
+            return x
+
+
+    # Set device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Hyperparameters
+    batch_size = 100
+    microbatch_size = 25
+    accumulation_steps = batch_size // microbatch_size
+    learning_rate = 0.001
+    num_epochs = 5
+
+    # Load the MNIST dataset
+    train_dataset = datasets.MNIST(
+        root="dataset/", train=True, transform=transforms.ToTensor(), download=True
+    )
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=microbatch_size, shuffle=True
+    )
+
+    # Initialize the model, loss function, and optimizer
+    model = SimpleNet().to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Training loop
+    for epoch in range(num_epochs):
+        for batch_idx, (data, targets) in enumerate(train_loader):
+            # Move data and targets to the appropriate device
+            data, targets = data.to(device), targets.to(device)
+
+            # Forward pass
+            scores = model(data)
+            loss = criterion(scores, targets)
+
+            # Backward pass
+            loss.backward()
+
+            # Perform an optimizer step after accumulating gradients from the specified number of microbatches
+            if (batch_idx + 1) % accumulation_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+  #+end_src
+- Lower precision representation. Most training frameworks (e.g. TensorFlow, PyTorch)[8, 42] use single-precision float (32 bit) representations of gradients and parameters. Double-precision rep- resentations (64-bit) are relatively uncommon. One way to reduce the memory demands of training a model is to use half-precision (16 bit) representations of data. Automatic mixed precision (AMP) will automatically try and determine when data can be safely compressed to 16 bit with- out accuracy losses. AMP generally reports little-to-no accuracy losses while achieving as much as 5.5X speedups when training large models [cite:@amp2020;@Zhao_2021;].
+- Sparse representation: The most simple approach, commonly used by default for embedding tables, is to represent a gradient as key-value pairs mapping indices to gradient values.
+**** Pipeline parallelism
+**** Memory offloading/Data Spilling
+**** Hybrid parallelism
+*** Mixture of experts
+TODO: [fn:23] [cite:@chen2022understanding;@fedus2022review;@Singh_2023;]
 ** Finetuning
   Fine-tuning [fn:6], especially in the context of modern deep learning models [cite:@lialin2023scaling; @dutt2023parameterefficient; @liao2023parameterefficient; @chung2022scaling; @lv2023parameter], refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
 
@@ -1090,15 +1187,15 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 ** Model compression
 ...three main approaches to reduce its inference latency: make it do inference faster, make the model smaller, or make the hardware it’s deployed on run faster. The process of making a model smaller is called model compression, and the process to make it do inference faster is called inference optimization.
 
-- Low-Rank Factorization: [cite:@hu2021lora] the key idea behind low-rank factorization is to replace high-dimensional tensors with lower-dimensional tensors. A Example: compact convolutional filters: where the over-parameterized (having too many parameters) convolution filters are replaced with compact blocks to both reduce the number of parameters and increase speed.
+*** Low-Rank Factorization: the key idea behind low-rank factorization is to replace high-dimensional tensors with lower-dimensional tensors. A Example: compact convolutional filters: where the over-parameterized (having too many parameters) convolution filters are replaced with compact blocks to both reduce the number of parameters and increase speed.
 
-- Knowledge distillation: a method in which a small model (student) is trained to mimic a larger model or ensemble of models (teacher). The smaller model is what you’ll deploy.
+*** Knowledge distillation: a method in which a small model (student) is trained to mimic a larger model or ensemble of models (teacher). The smaller model is what you’ll deploy.
 
-- Pruning: a method originally used for decision trees where you remove sections of a tree that are uncritical and redundant for classification.25 As neural networks gained wider adoption, people started to realize that neural networks are over-parameterized and began to find ways to reduce the workload caused by the extra parameters. One is to remove entire nodes of a neural network, which means changing its architecture and reducing its number of parameters. The more common meaning is to find parameters least useful to predictions and set them to 0. In this case, pruning doesn’t reduce the total number of parameters, only the number of nonzero parameters. The architecture of the neural network remains the same. This helps with reducing the size of a model because pruning makes a neural network more sparse, and sparse architecture tends to require less storage space than dense structure.
+*** Pruning: a method originally used for decision trees where you remove sections of a tree that are uncritical and redundant for classification.25 As neural networks gained wider adoption, people started to realize that neural networks are over-parameterized and began to find ways to reduce the workload caused by the extra parameters. One is to remove entire nodes of a neural network, which means changing its architecture and reducing its number of parameters. The more common meaning is to find parameters least useful to predictions and set them to 0. In this case, pruning doesn’t reduce the total number of parameters, only the number of nonzero parameters. The architecture of the neural network remains the same. This helps with reducing the size of a model because pruning makes a neural network more sparse, and sparse architecture tends to require less storage space than dense structure.
 
-- Quantization: the most general and commonly used model compression method. Quantization reduces a model’s size by using fewer bits to represent its parameters. [fn:4]
+*** Quantization: the most general and commonly used model compression method. Quantization reduces a model’s size by using fewer bits to represent its parameters. [fn:4]
 
-- Dynamic shape input: in deep learning, dynamic shape input refers to the ability of a neural network to handle input data with varying shapes or dimensions during the training and inference process. Traditional neural networks typically require fixed-size inputs, meaning the input data must be reshaped or preprocessed to fit the expected dimensions before being fed to the network.
+*** Dynamic shape input: in deep learning, dynamic shape input refers to the ability of a neural network to handle input data with varying shapes or dimensions during the training and inference process. Traditional neural networks typically require fixed-size inputs, meaning the input data must be reshaped or preprocessed to fit the expected dimensions before being fed to the network.
 
   - Dynamic shape input is useful when dealing with data like images, text, or time-series data, where the dimensions can vary significantly. For example, when processing images, you might encounter images with different aspect ratios, sizes, or channels. Similarly, in text processing, the length of sentences or documents can also differ significantly.
 
@@ -1204,7 +1301,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 
   - In these examples, we demonstrate how to handle dynamic shape input for sequences with variable lengths and images with different sizes using PyTorch. The first example employs padding and masking to handle variable-length sequences in an RNN model, while the second example uses adaptive pooling to handle variable-sized images in a CNN model.
 
-- Caching [fn:9]
+*** Caching [fn:9]
 
 ** Offline Evaluation
 *** Metrics
@@ -1430,7 +1527,7 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
 **** Model calibration
 - If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
 - To measure a model’s calibration [fn:11], a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
-- To calibrate your models [cite:@10.1371/journal.pone.0262838], a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
+- To calibrate your models [cite:@10.1371/journal.pone.0262838;@guo2017calibration], a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
 **** Confidence measurement
 - If you only want to show the predictions that your model is certain about, how do you measure that certainty?
 **** Slice-based evaluation
@@ -1539,18 +1636,26 @@ Core ask: How often should I retrain my models? The rational for /test in produc
   + Automated retraining
   + Automated, stateful training
   + Continual learning
-- How often to update your models
+** Test in production
 - Shadow deployment
 - A/B testing
 - Canary release
 - Interleaving experiments
   What if instead of exposing a user to recommendations from a model, we expose that user to recommendations from both models and see which model’s recommendations they will click on? That’s the idea behind interleaving experiments.
-- Bandits
-  Bandit algorithms originated in gambling. A casino has multiple slot machines with different payouts. A slot machine is also known as a one-armed bandit, hence the name. Multi-armed bandits are algorithms that allow you to balance between exploitation (choosing the slot machine that has paid the most in the past) and exploration (choosing other slot machines that may pay off even more).
-
-
-
+- Multi-armed bandits/model bandits
+  Bandits are well-studied in academia and have been shown to be a lot more data- efficient than A/B testing (in many cases, bandits are even optimal). Bandits require less data to determine which model is the best and, at the same time, reduce opportu‐ nity cost as they route traffic to the better model more quickly. [fn:21]
+- Contextual bandits as an exploration strategy [cite:@guo2020deep]
+- Feature store [fn:22]
 * Footnotes
+[fn:28] [[https://github.com/cybertronai/gradient-checkpointing][cybertronai/gradient-checkpointing: Make huge neural nets fit in memory]]
+[fn:27] [[https://towardsdatascience.com/accelerating-deep-learning-using-distributed-sgd-an-overview-e66c4aee1a0c][Accelerating Deep Learning Using Distributed SGD — An Overview | by Branislav Holländer | Towards Data Science]]
+[fn:26] Practitioners have found that increasing the depth of Transformers by stacking on more atten- tion blocks generally improves accuracy [4]. As such, Transformers have motivated practitioners to explore increasingly deep model architectures.
+[fn:25] A pytorch tutorial: [[https://github.com/pytorch/tutorials/blob/main/intermediate_source/ddp_tutorial.rst][tutorials/intermediate_source/ddp_tutorial.rst at main · pytorch/tutorials]] and [[https://github.com/pytorch/tutorials/blob/main/advanced_source/ddp_pipeline.py][tutorials/advanced_source/ddp_pipeline.py at main · pytorch/tutorials]]
+
+[fn:24] [[https://developer.nvidia.com/blog/language-modeling-using-megatron-a100-gpu/][State-of-the-Art Language Modeling Using Megatron on the NVIDIA A100 GPU | NVIDIA Technical Blog]]
+[fn:22] [[https://nlathia.github.io/2020/12/Building-a-feature-store.html][Building a feature store - nlathia.github.io]]
+[fn:23] [[https://github.com/XueFuzhao/awesome-mixture-of-experts][XueFuzhao/awesome-mixture-of-experts: A collection of AWESOME things about mixture-of-experts]]
+[fn:21] [[https://towardsdatascience.com/a-b-testing-is-there-a-better-way-an-exploration-of-multi-armed-bandits-98ca927b357d][A/B testing — Is there a better way? An exploration of multi-armed bandits | by Greg Rafferty | Towards Data Science]]
 [fn:20] [[https://www.listendata.com/2014/08/excel-template-gain-and-lift-charts.html][Understand Gain and Lift Charts]]
 [fn:19] Continual learning is largely an infrastructural problem.
 [fn:18] [[https://blog.dataiku.com/mlops-champion-challenger-model-evaluation][MLOps: Champion/Challenger Model Evaluation in Dataiku]], [[https://medium.com/decision-automation/what-is-champion-challenger-and-how-does-it-enable-choosing-the-right-decision-f57b8b653149][What is Champion Challenger and How does It Enable Choosing the Right Decision? | by Arash Aghlara | FlexRule Decision Automation | Medium]]
@@ -1559,39 +1664,22 @@ Core ask: How often should I retrain my models? The rational for /test in produc
 [fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
 [fn:8] [[https://en.wikipedia.org/wiki/Multi-armed_bandit][Multi-armed bandit - Wikipedia]]
 [fn:2] [[https://medium.com/p/7895bb1ab423][Why TikTok made its user so obsessive? The AI Algorithm that got you hooked. | by Catherine Wang | Towards Data Science]]
-[fn:16]
-- https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning
-- https://huggingface.co/docs/transformers/v4.18.0/en/performance
-[fn:15]
-- https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions
-- [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
+[fn:16] https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning,  https://huggingface.co/docs/transformers/v4.18.0/en/performance
+[fn:15] [[https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions][Machine Learning Challenge Winning Solutions]], [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
 [fn:14] [[https://booking.ai/dont-be-tricked-by-the-hashing-trick-192a6aae3087][Don’t be tricked by the Hashing Trick | by Lucas Bernardi | Booking.com Data Science]]
 [fn:13] http://web.stanford.edu/class/cs246/
 [fn:12] https://stanford-cs329s.github.io/syllabus.html
-[fn:11]
-- [[https://towardsdatascience.com/a-comprehensive-guide-on-model-calibration-part-1-of-4-73466eb5e09a][A Comprehensive Guide on Model Calibration: What, When, and How | by Raj Sangani | Towards Data Science]]
-- [[https://scikit-learn.org/stable/auto_examples/calibration/plot_compare_calibration.html#sphx-glr-auto-examples-calibration-plot-compare-calibration-py][Comparison of Calibration of Classifiers — scikit-learn 1.3.0 documentation]]
-- https://huggingface.co/spaces/merve/uncertainty-calibration
-- https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration
-- https://www.kaggle.com/code/naiborhujosua/model-calibration
-- https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html
-- https://github.com/gpleiss/temperature_scaling
+[fn:11] [[https://medium.com/codex/metrics-to-measuring-calibration-in-deep-learning-36b0b11fe816][Metrics to Measuring Calibration in Deep-Learning | by Sieun Park | CodeX | Medium]], [[https://towardsdatascience.com/expected-calibration-error-ece-a-step-by-step-visual-explanation-with-python-code-c3e9aa12937d][Expected Calibration Error (ECE): A Step-by-Step Visual Explanation | by Maja Pavlovic | Jul, 2023 | Towards Data Science,]], [[https://towardsdatascience.com/a-comprehensive-guide-on-model-calibration-part-1-of-4-73466eb5e09a][A Comprehensive Guide on Model Calibration: What, When, and How | by Raj Sangani | Towards Data Science]], [[https://scikit-learn.org/stable/auto_examples/calibration/plot_compare_calibration.html#sphx-glr-auto-examples-calibration-plot-compare-calibration-py][Comparison of Calibration of Classifiers — scikit-learn 1.3.0 documentation]], https://huggingface.co/spaces/merve/uncertainty-calibration, https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration, https://www.kaggle.com/code/naiborhujosua/model-calibration, https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html, https://github.com/gpleiss/temperature_scaling
 [fn:9] [[https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26][How We Scaled Bert To Serve 1+ Billion Daily Requests on CPUs | by Quoc N. Le | Medium]]
 [fn:6] [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]], [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]], https://github.com/huggingface/peft, [[https://lightning.ai/blog/how-to-finetune-gpt-like-large-language-models-on-a-custom-dataset/][How To Finetune GPT Like Large Language Models on a Custom Dataset - Lightning AI]], [[https://lightning.ai/pages/community/article/lora-llm/][Parameter-Efficient LLM Finetuning With Low-Rank Adaptation (LoRA) - Lightning AI]]
 [fn:5]
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
 - [[https://magazine.sebastianraschka.com/p/finetuning-llms-with-adapters][Finetuning LLMs Efficiently with Adapters]]
-[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. This method is also known as - https://huggingface.co/docs/optimum/concept_guides/quantization
-- https://arxiv.org/abs/1906.00532
-- [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
-- https://www.kaggle.com/code/anilkrsah/model-quantization
-- https://www.kaggle.com/code/ritvik1909/model-quantization
-[fn:3]
-- https://github.com/cybertronai/gradient-checkpointing
-- [[https://web.stanford.edu/~rezab/classes/cme323/S20/][DAO: Distributed Algorithms and Optimization]]
-[fn:1]
-Chip Huyen, Designing Machine Learning Systems, p.138
+[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent, [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
+, https://www.kaggle.com/code/anilkrsah/model-quantization, https://www.kaggle.com/code/ritvik1909/model-quantization, [[https://huggingface.co/docs/optimum/concept_guides/quantization][Quantization]]
+[fn:3] [[https://web.stanford.edu/~rezab/classes/cme323/S20/][DAO: Distributed Algorithms and Optimization]]
+[fn:1] Chip Huyen, Designing Machine Learning Systems, p.138
 * References
 #+CITE_EXPORT: csl /Users/toeinriver/Desktop/ml-system-design/csl/ieee.csl
 #+print_bibliography:
