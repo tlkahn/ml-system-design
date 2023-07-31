@@ -132,7 +132,6 @@ Some real-world examples include:
     print(np.array(hashed_data.toarray()).shape)
     #+end_src
 
-
 ** Cross feature
 In machine learning, a cross feature, also known as an interaction feature or interaction term, is a new feature that represents theinteraction or combination of multiple existing features. It capturesthe relationship between different features and can provide additionalinformation for the model.
 
@@ -962,7 +961,7 @@ The process of tracking the progress and results of an experiment is called expe
 - System performance metrics such as memory usage and CPU/GPU utilization.
 - The values over time of any parameter and hyperparameter whose changes can affect your model’s performance, such as the learning rate if you use a learning rate schedule; gradient norms (both globally and per layer) etc.
 ** Distributed Training
-Some directions based on [cite:@nagrecha2023systems] include rematerialization[cite:@checkpointing2016], data spilling across memory hierarchy/CPU offloading [cite:@zero2019; @zero2021; @hydra2021; @mpms2021; @swapadvisor2021; @l2l2020], pipeline/model parallelism[cite:@gpipe2018; @pipedream2018; @terapipe2021; @torchgpipe2020; @megatronlmgpuscaling2021], memory-efficient data representations, and hybrid parallelism [cite:@flexflow2018; @alpa2022; @hydra2021; @mpms2021; @gshard2020].
+Some directions based on [cite:@nagrecha2023systems;@https://doi.org/10.48550/arxiv.1802.09941;] include rematerialization[cite:@checkpointing2016], data spilling across memory hierarchy/CPU offloading [cite:@zero2019; @zero2021; @hydra2021; @mpms2021; @swapadvisor2021; @l2l2020], pipeline/model parallelism[cite:@gpipe2018; @pipedream2018; @terapipe2021; @torchgpipe2020; @megatronlmgpuscaling2021], memory-efficient data representations, and hybrid parallelism [cite:@flexflow2018; @alpa2022; @hydra2021; @mpms2021; @gshard2020].
 *** Challenges
 - Memory Scalability
 - Performance
@@ -984,13 +983,71 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
     The most popular synchronous data parallel execution technique is Distributed Data Parallelism (DDP) [fn:25]. DDP replicates a model and assigns copies to different accelerators. An initial “global mini- batch” is taken in, then partitioned evenly across the replicas to to produce local gradient updates for each replica. These gradients are then aggregated across replicas to produce a global update, typically using an all-reduce communication pattern.
   + All-gather and all-reduce
 *** Large Model Architectures
+**** Checkpointing
+  Checkpointing in machine learning refers to the practice of periodically saving the state of a model during its training process. It usually involves storing the model's weights and other relevant information, such as optimizer state and training progress (i.e., the current epoch or iteration). Checkpointing serves several purposes:
+
+  1. **Fault tolerance**: Training deep learning models can be a time-consuming and computationally expensive process. If the training process is interrupted due to hardware failure, software crash, or other issues, checkpointing allows you to resume training from the last saved state, avoiding the need to restart from scratch.
+
+  2. **Early stopping**: Checkpointing enables you to monitor the model's performance on a validation set during training. If the validation performance starts degrading (indicating overfitting), you can stop the training early and revert to the best-performing checkpoint.
+
+  3. **Model selection**: By saving checkpoints at different stages of the training process, you can evaluate and compare multiple versions of the model on a test set or based on various performance metrics. This allows you to select the best-performing model for deployment or further fine-tuning.
+
+  4. **Resource management**: For long-running training processes or when using limited computational resources, checkpointing allows you to pause and resume training at your convenience. You can free up resources when needed and resume training when resources become available again.
+
+  In deep learning frameworks like TensorFlow and PyTorch, you can implement checkpointing using built-in utilities for saving and loading model states. Here's a simple example of checkpointing using PyTorch:
+
+    #+begin_src python :tangle src/basic-checkpointing.py :comments link
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+
+
+      # Create a simple model
+      class SimpleModel(nn.Module):
+          def __init__(self):
+              super(SimpleModel, self).__init__()
+              self.fc = nn.Linear(10, 1)
+
+          def forward(self, x):
+              return self.fc(x)
+
+
+      model = SimpleModel()
+      optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+      # Save a checkpoint
+      torch.save(
+          {
+              "epoch": 10,
+              "model_state_dict": model.state_dict(),
+              "optimizer_state_dict": optimizer.state_dict(),
+              "loss": 0.1,
+          },
+          "checkpoint.pth",
+      )
+
+      # Load a checkpoint
+      checkpoint = torch.load("checkpoint.pth")
+      model.load_state_dict(checkpoint["model_state_dict"])
+      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+      epoch = checkpoint["epoch"]
+      loss = checkpoint["loss"]
+
+      model.train()  # Set the model in train mode
+      # Continue training...
+    #+end_src
+
 **** Depth-wise scaling
   Most commonly needed for long, sequential chain architectures e.g. Transformers [fn:26].
 **** Width-wise scaling
-  Commonly used for very wide, easily parallelized operators e.g. embedding table lookups [cite:@acun2020understanding]. Embedding tables and recommender models make up an outsized proportion of DL workloads — Meta reports that 50% of their DL training cycles are spent on embedding-table-based recommender models
-**** Example scaling
+  Commonly used for very wide, easily parallelized operators e.g. embedding table lookups [cite:@acun2020understanding;@li2023recent;@Zhang_2019;@10.1145/3534678.3539034;@xu2022banditmf;]. Embedding tables and recommender models make up an outsized proportion of DL workloads — Meta reports that 50% of their DL training cycles are spent on embedding-table-based recommender models
+**** TODO Example scaling
+[cite:@dollár2021fast]
+
 *** Training systems
+
 **** Basic approaches
+
 - Rematerialization, aka gradient checkpointing [fn:28], attempts to minimize the memory demands of backpropagation specifically [cite:@checkpointing2016;@checkpointing2000;].
   Rematerialization trades compute for memory by initially discarding most of the activations except for a few checkpoints, then recomputing the discarded during backpropagation using the checkpoints. Checkpointing is critical to techniques such as [[*Pipeline parallelism][Pipeline parallelism]] and shard alternator parallelism.
 - Accumulation. Accumulation [cite:@torchgpipe2020; @gpipe2018] delays the application of these aggregated gradients, instead computing new mini-batch-gradient-updates and accumulating them onto our aggregated gradient vectors. The new gradient is now the aggregated sum of 2 mini-batch updates, rather than 1. In this way, we can scale up our effective mini-batch size and gradient impact without actually training a larger batch. We refer to the smaller, individual batches as microbatches, and keep referring to the effective summed batch as the mini-batch. Accumulation is essential to pipeline parallelism, and is often used in conjunction with other techniques.
@@ -1063,79 +1120,81 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 
         print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
   #+end_src
+
 - Lower precision representation. Most training frameworks (e.g. TensorFlow, PyTorch)[8, 42] use single-precision float (32 bit) representations of gradients and parameters. Double-precision rep- resentations (64-bit) are relatively uncommon. One way to reduce the memory demands of training a model is to use half-precision (16 bit) representations of data. Automatic mixed precision (AMP) will automatically try and determine when data can be safely compressed to 16 bit with- out accuracy losses. AMP generally reports little-to-no accuracy losses while achieving as much as 5.5X speedups when training large models [cite:@amp2020;@Zhao_2021;].
 - Sparse representation: The most simple approach, commonly used by default for embedding tables, is to represent a gradient as key-value pairs mapping indices to gradient values.
+
 **** Pipeline parallelism
 
-- Basics
+For DL pipelining, we fill up the pipeline with microbatches, like those used in gra- dient accumulation. In essence, pipeline parallelism is the combination of gradient accumulation and model parallelism. [cite:@torchgpipe2020; @gpipe2018] Independent microbatches are shuttled through the shard pipeline, then gradients for each microbatch are accumulated for each pipeline stage. Once the gradients for the full mini-batch (combination of all microbatches) are all aggregated, they can be applied to the model.
 
-  For DL pipelining, we fill up the pipeline with microbatches, like those used in gra- dient accumulation. In essence, pipeline parallelism is the combination of gradient accumulation and model parallelism. [cite:@torchgpipe2020; @gpipe2018] Independent microbatches are shuttled through the shard pipeline, then gradients for each microbatch are accumulated for each pipeline stage. Once the gradients for the full mini-batch (combination of all microbatches) are all aggregated, they can be applied to the model.
+Here's a PyTorch example using GPipe from the /torchgpipe/ package, which implements pipeline parallelism. In this example, we will build upon the previous SimpleNet model and divide it into two pipeline stages. We will use pipeline parallelism to train the model with microbatches. First, you'll need to install the torchgpipe package by running =pip install torchgpipe=.
 
-  Here's a PyTorch example using GPipe from the /torchgpipe/ package, which implements pipeline parallelism. In this example, we will build upon the previous SimpleNet model and divide it into two pipeline stages. We will use pipeline parallelism to train the model with microbatches. First, you'll need to install the torchgpipe package by running =pip install torchgpipe=.
+#+begin_src python :tangle src/basic-pipeline-parallelism.py :comments link
+  import torch
+  import torch.nn as nn
+  import torch.optim as optim
+  import torchvision.datasets as datasets
+  import torchvision.transforms as transforms
+  from torch.utils.data import DataLoader
+  from torchgpipe import GPipe
 
-  #+begin_src python :tangle src/basic-pipeline-parallelism.py :comments link
-    import torch
-    import torch.nn as nn
-    import torch.optim as optim
-    import torchvision.datasets as datasets
-    import torchvision.transforms as transforms
-    from torch.utils.data import DataLoader
-    from torchgpipe import GPipe
+  # Set device
+  device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Set device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+  # Hyperparameters
+  batch_size = 100
+  microbatch_size = 25
+  accumulation_steps = batch_size // microbatch_size
+  learning_rate = 0.001
+  num_epochs = 5
 
-    # Hyperparameters
-    batch_size = 100
-    microbatch_size = 25
-    accumulation_steps = batch_size // microbatch_size
-    learning_rate = 0.001
-    num_epochs = 5
+  # Load the MNIST dataset
+  train_dataset = datasets.MNIST(
+      root="dataset/", train=True, transform=transforms.ToTensor(), download=True
+  )
+  train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
 
-    # Load the MNIST dataset
-    train_dataset = datasets.MNIST(
-        root="dataset/", train=True, transform=transforms.ToTensor(), download=True
-    )
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+  # Split the SimpleNet model into two pipeline stages
+  model = nn.Sequential(
+      nn.Linear(28 * 28, 128), nn.ReLU(), nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 10)
+  )
 
-    # Split the SimpleNet model into two pipeline stages
-    model = nn.Sequential(
-        nn.Linear(28 * 28, 128), nn.ReLU(), nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 10)
-    )
+  # Wrap the model with GPipe
+  model = GPipe(
+      model,
+      balance=[2, 3],
+      devices=[0, 1] if device == "cuda" else [0, 0],
+      chunks=accumulation_steps,
+  )
 
-    # Wrap the model with GPipe
-    model = GPipe(
-        model,
-        balance=[2, 3],
-        devices=[0, 1] if device == "cuda" else [0, 0],
-        chunks=accumulation_steps,
-    )
+  # Initialize the loss function and optimizer
+  criterion = nn.CrossEntropyLoss()
+  optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # Initialize the loss function and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+  # Training loop
+  for epoch in range(num_epochs):
+      for data, targets in train_loader:
+          # Move data and targets to the appropriate device
+          data, targets = data.to(device), targets.to(device)
 
-    # Training loop
-    for epoch in range(num_epochs):
-        for data, targets in train_loader:
-            # Move data and targets to the appropriate device
-            data, targets = data.to(device), targets.to(device)
+          # Forward pass
+          scores = model(data)
+          loss = criterion(scores, targets)
 
-            # Forward pass
-            scores = model(data)
-            loss = criterion(scores, targets)
+          # Backward pass
+          loss.backward()
 
-            # Backward pass
-            loss.backward()
+          # Perform an optimizer step
+          optimizer.step()
+          optimizer.zero_grad()
 
-            # Perform an optimizer step
-            optimizer.step()
-            optimizer.zero_grad()
+      print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+#+end_src
 
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
-  #+end_src
+The code below demonstrates basic pipeline parallelism in PyTorch without using any third-party libraries. However, it's important to note that this example does not include features such as multi-device support, automatic model partitioning, and load balancing etc. In this example, we split SimpleNet into four pipeline stages. We modify the forward method to accept a stage argument, which determines which stage is being computed. During training, we first compute the forward pass for stage 1 and store the output. We then detach the output from the computational graph and reattach gradients to it. This allows us to perform the backward pass for stage 2 independently, followed by the backward pass for stage 1.
 
-  The code below demonstrates basic pipeline parallelism in PyTorch without using any third-party libraries. However, it's important to note that this example does not include features such as multi-device support, automatic model partitioning, and load balancing etc. In this example, we split SimpleNet into two pipeline stages, =stage1= and =stage2=. We modify the forward method to accept a stage argument, which determines which stage is being computed. During training, we first compute the forward pass for stage 1 and store the output. We then detach the output from the computational graph and reattach gradients to it. This allows us to perform the backward pass for stage 2 independently, followed by the backward pass for stage 1.
+In this pipeline setup, a "bubble" occurs when a stage is idle, waiting for input from the previous stage or for the next stage to be available to receive output. Bubbles can lead to inefficiencies in the pipeline, as they result in idle time for the involved stages. In practice, techniques such as pipeline schedule optimization can be used to minimize the impact of bubbles and improve overall pipeline efficiency.
 
   #+begin_src python :tangle src/basic-pipeline-parallelism-ii.py :comments link
     import torch
@@ -1144,6 +1203,7 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
     import torchvision.datasets as datasets
     import torchvision.transforms as transforms
     from torch.utils.data import DataLoader
+    from multiprocessing import Process, Pipe
 
     # Set device
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -1169,22 +1229,81 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
         def __init__(self):
             super(SimpleNet, self).__init__()
             self.stage1 = nn.Sequential(
-                nn.Linear(28 * 28, 128),
+                nn.Linear(28 * 28, 256),
                 nn.ReLU(),
             )
-            self.stage2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 10))
+            self.stage2 = nn.Sequential(
+                nn.Linear(256, 128),
+                nn.ReLU(),
+            )
+            self.stage3 = nn.Sequential(
+                nn.Linear(128, 64),
+                nn.ReLU(),
+            )
+            self.stage4 = nn.Sequential(
+                nn.Linear(64, 10),
+            )
 
         def forward(self, x, stage):
             if stage == 1:
                 return self.stage1(x)
             elif stage == 2:
                 return self.stage2(x)
+            elif stage == 3:
+                return self.stage3(x)
+            elif stage == 4:
+                return self.stage4(x)
+
+
+    # Pipeline stage function
+    def run_stage(stage, input_conn, output_conn, model, optimizer, criterion):
+        while True:
+            data, targets, stage_input = input_conn.recv()
+            if data is None:
+                break
+
+            if stage != 1:
+                data = stage_input
+
+            stage_output = model(data, stage=stage)
+
+            if stage != 4:
+                output_conn.send((targets, stage_output))
+            else:
+                loss = criterion(stage_output, targets)
+                loss.backward()
+
+                if optimizer is not None:
+                    optimizer.step()
+                    optimizer.zero_grad()
 
 
     # Initialize the model, loss function, and optimizer
     model = SimpleNet().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Create input and output connections for each stage
+    input_conns = [Pipe(False) for _ in range(4)]
+    output_conns = [Pipe(False) for _ in range(4)]
+
+    # Start pipeline stage processes
+    processes = []
+    for i in range(4):
+        optimizer_stage = optimizer if i == 3 else None
+        p = Process(
+            target=run_stage,
+            args=(
+                i + 1,
+                input_conns[i][1],
+                output_conns[i][0],
+                model,
+                optimizer_stage,
+                criterion,
+            ),
+        )
+        p.start()
+        processes.append(p)
 
     # Training loop
     for epoch in range(num_epochs):
@@ -1194,85 +1313,162 @@ Some directions based on [cite:@nagrecha2023systems] include rematerialization[c
 
             optimizer.zero_grad()
 
-            # Forward pass - Stage 1
-            stage1_output = model(data, stage=1)
-            stage1_output = stage1_output.detach().requires_grad_()
-
-            # Forward pass - Stage 2
-            scores = model(stage1_output, stage=2)
-            loss = criterion(scores, targets)
-
-            # Backward pass - Stage 2
-            loss.backward()
-
-            # Backward pass - Stage 1
-            stage1_output_grad = stage1_output.grad
-            stage1_output.backward(stage1_output_grad)
-
-            # Accumulate gradients and perform an optimizer step
-            if (i + 1) % accumulation_steps == 0:
-                optimizer.step()
-                optimizer.zero_grad()
+            # Forward pass through the pipeline
+            input_conns[0][0].send((data, targets, None))
+            for j in range(1, 4):
+                _, stage_output = output_conns[j - 1][1].recv()
+                input_conns[j][0].send((None, None, stage_output))
 
         print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+
+    # Terminate the pipeline stage processes
+    for i in range(4):
+        input_conns[i][0].send((None, None, None))
+        processes[i].join()
 #+end_src
 
-  Backpropagation presents a challenge for pipeline parallel training. As explained in Section 2, intermedi- ate outputs must be available for backpropagation to occur. When combined with accumulation, however, this would require us to store a different intermediate output set for each microbatch, thus robbing us of any scalability advantage offered by accumulation. GPipe [25], one of the first pipeline parallel training systems, pro- posed combining accumulation with checkpointing to address this issue. Activations would only be stored at shard/pipe stage bound- aries, with recomputation occurring as gradients shifted backwards through the pipe during backpropagation. The checkpointing approach is now standard in most, if not all, pipeline parallel training systems
+Actually there is =torch.distributed.pipeline.sync.Pipe= instead of =Pipe= from Python's =multiprocessing=. The =Pipe= module from =torch.distributed= automatically handles the pipeline stages, data transfer between stages, and synchronization. The =chunks= parameter is set to the number of accumulation steps, which controls the number of microbatches used in the pipeline.
 
-  Checkpointing in machine learning refers to the practice of periodically saving the state of a model during its training process. It usually involves storing the model's weights and other relevant information, such as optimizer state and training progress (i.e., the current epoch or iteration). Checkpointing serves several purposes:
+#+begin_src python :tangle src/basic-pipeline-parallelism-iii.py :comments link
+  import os
+  import torch
+  import torch.nn as nn
+  import torch.optim as optim
+  import torchvision.datasets as datasets
+  import torchvision.transforms as transforms
+  from torch.utils.data import DataLoader
+  from torch.distributed.pipeline.sync import Pipe
 
-  1. **Fault tolerance**: Training deep learning models can be a time-consuming and computationally expensive process. If the training process is interrupted due to hardware failure, software crash, or other issues, checkpointing allows you to resume training from the last saved state, avoiding the need to restart from scratch.
+  # Set device
+  device = "cuda" if torch.cuda.is_available() else "cpu"
 
-  2. **Early stopping**: Checkpointing enables you to monitor the model's performance on a validation set during training. If the validation performance starts degrading (indicating overfitting), you can stop the training early and revert to the best-performing checkpoint.
+  # Hyperparameters
+  batch_size = 100
+  microbatch_size = 25
+  accumulation_steps = batch_size // microbatch_size
+  learning_rate = 0.001
+  num_epochs = 5
 
-  3. **Model selection**: By saving checkpoints at different stages of the training process, you can evaluate and compare multiple versions of the model on a test set or based on various performance metrics. This allows you to select the best-performing model for deployment or further fine-tuning.
-
-  4. **Resource management**: For long-running training processes or when using limited computational resources, checkpointing allows you to pause and resume training at your convenience. You can free up resources when needed and resume training when resources become available again.
-
-  In deep learning frameworks like TensorFlow and PyTorch, you can implement checkpointing using built-in utilities for saving and loading model states. Here's a simple example of checkpointing using PyTorch:
-    #+begin_src python :tangle src/basic-checkpointing.py :comments link
-      import torch
-      import torch.nn as nn
-      import torch.optim as optim
-
-
-      # Create a simple model
-      class SimpleModel(nn.Module):
-          def __init__(self):
-              super(SimpleModel, self).__init__()
-              self.fc = nn.Linear(10, 1)
-
-          def forward(self, x):
-              return self.fc(x)
+  # Load the MNIST dataset
+  train_dataset = datasets.MNIST(
+      root="dataset/", train=True, transform=transforms.ToTensor(), download=True
+  )
+  train_loader = DataLoader(
+      dataset=train_dataset, batch_size=microbatch_size, shuffle=True
+  )
 
 
-      model = SimpleModel()
-      optimizer = optim.SGD(model.parameters(), lr=0.01)
+  # Define the neural network model
+  class SimpleNet(nn.Module):
+      def __init__(self):
+          super(SimpleNet, self).__init__()
+          self.stage1 = nn.Sequential(
+              nn.Linear(28 * 28, 256),
+              nn.ReLU(),
+          )
+          self.stage2 = nn.Sequential(
+              nn.Linear(256, 128),
+              nn.ReLU(),
+          )
+          self.stage3 = nn.Sequential(
+              nn.Linear(128, 64),
+              nn.ReLU(),
+          )
+          self.stage4 = nn.Sequential(
+              nn.Linear(64, 10),
+          )
 
-      # Save a checkpoint
-      torch.save(
-          {
-              "epoch": 10,
-              "model_state_dict": model.state_dict(),
-              "optimizer_state_dict": optimizer.state_dict(),
-              "loss": 0.1,
-          },
-          "checkpoint.pth",
-      )
+      def forward(self, x):
+          x = x.view(-1, 28 * 28)
+          x = self.stage1(x)
+          x = self.stage2(x)
+          x = self.stage3(x)
+          x = self.stage4(x)
+          return x
 
-      # Load a checkpoint
-      checkpoint = torch.load("checkpoint.pth")
-      model.load_state_dict(checkpoint["model_state_dict"])
-      optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-      epoch = checkpoint["epoch"]
-      loss = checkpoint["loss"]
 
-      model.train()  # Set the model in train mode
-      # Continue training...
-    #+end_src
+  # Initialize the model and wrap it with Pipe
+  model = SimpleNet()
+  model = Pipe(model, chunks=accumulation_steps, checkpoint="never").to(device)
+
+  # Initialize the loss function and optimizer
+  criterion = nn.CrossEntropyLoss()
+  optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+  # Training loop
+  for epoch in range(num_epochs):
+      for i, (data, targets) in enumerate(train_loader):
+          data, targets = data.to(device), targets.to(device)
+
+          optimizer.zero_grad()
+
+          # Forward pass
+          scores = model(data)
+          loss = criterion(scores, targets)
+
+          # Backward pass
+          loss.backward()
+
+          # Accumulate gradients and perform an optimizer step
+          if (i + 1) % accumulation_steps == 0:
+              optimizer.step()
+              optimizer.zero_grad()
+
+      print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+#+end_src
+
+Please note that this example assumes a single device for simplicity. In practice, you can combine =torch.distributed.pipeline.sync.Pipe= with =torch.distributed= for multi-device and distributed training.
+
+Backpropagation presents a challenge for pipeline parallel training. As explained in Section 2, intermedi- ate outputs must be available for backpropagation to occur. When combined with accumulation, however, this would require us to store a different intermediate output set for each microbatch, thus robbing us of any scalability advantage offered by accumulation. GPipe [cite:@gpipe2018], one of the first pipeline parallel training systems, proposed combining accumulation with checkpointing to address this issue. Activations would only be stored at shard/pipe stage boundaries, with recomputation occurring as gradients shifted backwards through the pipe during backpropagation. The checkpointing approach is now standard in most, if not all, pipeline parallel training systems.
 
 **** Memory offloading/Data Spilling
+
+While model parallelism looks at execution over multiple GPUs to distribute memory demands, some systems attempt to make use of main system memory (DRAM) rather than horizontally scaling across more GPUs.
+
+- Memory Offloading
+
+  1. Graph-based swapping and upfront offload planning
+
+     Initially many works treated offloading as a “swapping” problem — deciding when to swap tensors off of GPU memory and onto DRAM. Most use graph analysis algorithms to determine where to “inject” a swap operation based on when an activation, gradient, or parameter might next be used in the execution graph. SwapAdvisor [cite:@inproceedings], the most advanced of these swapping systems, uses a parallelized genetic search algorithm to analyze where the swap operators should be placed for best performance. It was also one of the first systems to support offloading parameters as well as activations, which is critical for training billion-parameter model architectures.
+
+  2. Dynamic offloading
+
+     Another approach was proposed with ZeRO-R [cite:@zero2019], a system for offloading that sends activations and parameters to DRAM dynami- cally. This approach “offloads when needed”, rather than planning offloads up front. The irregularity of the design can introduce issues such as memory fragmentation, but it adds a great deal of flexibility versus graph-based designs.
+
+  3. "Independent block" strategy
+
+     Hydra [cite:@hydra2021] opts for an “independent block” strategy, dividing a model architecture into submodels (like model parallelism) that can then be spilled between DRAM and GPU memory freely. An analogy can be drawn to spilling in RDBMSs, where independent data chunks can be sent down to a lower level of memory. Unlike other spilling systems, Hydra’s execution pattern is identical to model parallelism, and separates the execution of each model shard entirely.
+
+     L2L [cite:@l2l2020] uses a design similar to Hydra’s but is more restricted in its sharding approach. It targets Transformer architectures specifically, and swaps self-attention blocks (standard Transformer op- erators) with heuristics selected specifically for its target class of models. This allows it to perform very well on Transformer architectures, but prevents it from achieving the flexibility of Hydra or the dynamic generality of ZeRO-R.
+
+    The only option for hybrid-device execution on wide operators is to either serialize the parallel operator (index lookup in the table case) and rewrite the series of operations into a deep, rather than wide, model, or else to actually execute the wide operator on the CPU.
+
+- Computation Offloading
+
+  Mixed-CPU-GPU compute. ZeRO [cite:@zerooffload2021] proposed running parameter updates on the CPU while GPU execution is ongoing, specifically for the popular Adam optimizer.
+
+  Embedding tables are very wide memory-intensive operators which generally feed into some smaller DNN for further processing. Without any optimiza- tion, the sheer scale of the embedding table would force CPU-only execution. Alternatively, a user could place the embedding table on the CPU while the DNN sits in GPU memory and enjoys the ben- efits of GPU acceleration. Some works such as Hotline [cite:@hotline2022] try and pipeline data through the model, from the CPU-based embedding table into the GPU-accelerated DNN.
+
 **** Hybrid parallelism
+
+Hybrid parallelism techniques can be classified into two broad categories — “true” hybrids that integrate parallelization techniques from the ground up [fn:29], and top-down hybrids that select between different strategies at different stages of execution.
+
+***** Ground-up
+
+- Hydra's approach: using a spilling technique to reduce the number of GPUs needed for scalable model-parallel training, and then applying a layer of task parallelism on top to support efficient multi-model training.
+- Fully Sharded Data Parallelism (FSDP), originally introduced with ZeRO [cite:@zero2019], offers a hybrid of model parallelism and data parallelism.
+- ZeRO-Offload [cite:@zerooffload2021] proposed combining FSDP with spilling per accelerator, offloading sharded layer parameters that will not be used in the near future.
+- 3D Parallelism [cite:@zero2019; @megatron2019;@song2023optimuscc;] combines 1) FSDP with 2) pipeline parallelism and 3) tensor parallelism, to exploit scalable data parallelism along with parallel depth-wise and width-wise sharded execution.
+- Strategy finding: automate the process of combining parallelization techniques within a model.
+  + FlexFlow [cite:@flexflow2018]
+  + Alpa [cite:@alpa2022]
+- Model-Data Parallelism for Recommender Models (DLRM): [cite:@dlrm2019;@https://doi.org/10.48550/arxiv.2205.04702;@https://doi.org/10.48550/arxiv.1906.03109;@https://doi.org/10.48550/arxiv.2302.03525;] [fn:30]
+  #+begin_quote
+  Our parallelized DLRM will use a combination of model parallelism for the embeddings and data parallelism for the MLPs to mitigate the memory bottleneck produced by the embeddings while parallelizing the forward and backward propagations over the MLPs. Combined model and data parallelism is a unique requirement of DLRM as a result of its architecture and large model sizes.
+  #+end_quote
+
+***** Top-down
+
 ** Model compression
 ...three main approaches to reduce its inference latency: make it do inference faster, make the model smaller, or make the hardware it’s deployed on run faster. The process of making a model smaller is called model compression, and the process to make it do inference faster is called inference optimization.
 
@@ -1286,7 +1482,9 @@ A method in which a small model (student) is trained to mimic a larger model or 
 A method originally used for decision trees where you remove sections of a tree that are uncritical and redundant for classification.25 As neural networks gained wider adoption, people started to realize that neural networks are over-parameterized and began to find ways to reduce the workload caused by the extra parameters. One is to remove entire nodes of a neural network, which means changing its architecture and reducing its number of parameters. The more common meaning is to find parameters least useful to predictions and set them to 0. In this case, pruning doesn’t reduce the total number of parameters, only the number of nonzero parameters. The architecture of the neural network remains the same. This helps with reducing the size of a model because pruning makes a neural network more sparse, and sparse architecture tends to require less storage space than dense structure.
 
 *** Quantization
-The most general and commonly used model compression method. Quantization [cite:@Zhao_2021; @zandonati2023optimal; @gholami2021survey; @rokh2023comprehensive; @liang2021pruning; @bhandare2019efficient; @kuzmin2023pruning] reduces a model’s size by using fewer bits to represent its parameters. [fn:4]
+
+The most general and commonly used model compression method [fn:4]. Quantization [cite:@Zhao_2021; @zandonati2023optimal; @gholami2021survey; @rokh2023comprehensive; @liang2021pruning; @bhandare2019efficient; @kuzmin2023pruning;@https://doi.org/10.48550/arxiv.2206.09557;] reduces a model’s size by using fewer bits to represent its parameters.
+
 *** Dynamic shape input
 In deep learning, dynamic shape input refers to the ability of a neural network to handle input data with varying shapes or dimensions during the training and inference process. Traditional neural networks typically require fixed-size inputs, meaning the input data must be reshaped or preprocessed to fit the expected dimensions before being fed to the network.
 
@@ -1394,10 +1592,10 @@ In deep learning, dynamic shape input refers to the ability of a neural network 
 
   - In these examples, we demonstrate how to handle dynamic shape input for sequences with variable lengths and images with different sizes using PyTorch. The first example employs padding and masking to handle variable-length sequences in an RNN model, while the second example uses adaptive pooling to handle variable-sized images in a CNN model.
 
-*** Caching
-TODO: [fn:9]
-** Mixture of experts
-TODO: [fn:23] [cite:@chen2022understanding;@fedus2022review;@Singh_2023;]
+*** TODO Caching
+[fn:9]
+** TODO Mixture of experts
+[fn:23] [cite:@chen2022understanding;@fedus2022review;@Singh_2023;@rajbhandari2022deepspeedmoe;]
 ** Finetuning
   Fine-tuning [fn:6], especially in the context of modern deep learning models [cite:@lialin2023scaling; @dutt2023parameterefficient; @liao2023parameterefficient; @chung2022scaling; @lv2023parameter], refers to the process of adapting a pre-trained model to a new target task or dataset. Instead of training a model from scratch, which can be time-consuming and require large amounts of data, fine-tuning leverages the knowledge learned by the pre-trained model on a similar, larger dataset to achieve better performance on the target task with relatively less data and training time.
 
@@ -1684,7 +1882,7 @@ Evaluation metrics, by themselves, means little. When evaluating your model, it�
 **** Model calibration
 - If a model predicts that team A will beat team B with a 70% probability, and out of the 1,000 times these two teams play together, team A only wins 60% of the time, then we say that this model isn’t calibrated. A calibrated model should predict that team A wins with a 60% probability. To quote Nate Silver in his book The Signal and the Noise, calibration is "one of the most important tests of a forecast— I would argue that it is the single most important one."
 - To measure a model’s calibration [fn:11], a simple method is counting: you count the number of times your model outputs the probability X and the frequency Y of that prediction coming true, and plot X against Y.
-- To calibrate your models [cite:@10.1371/journal.pone.0262838;@guo2017calibration], a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]], which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
+- To calibrate your models [cite:@10.1371/journal.pone.0262838;@guo2017calibration], a common method is [[https://en.wikipedia.org/wiki/Platt_scaling][Platt scaling]]; which is implemented in scikit-learn with sklearn.calibration.CalibratedClassifierCV.
 **** Confidence measurement
 - If you only want to show the predictions that your model is certain about, how do you measure that certainty?
 **** Slice-based evaluation
@@ -1803,7 +2001,12 @@ Core ask: How often should I retrain my models? The rational for /test in produc
   Bandits are well-studied in academia and have been shown to be a lot more data- efficient than A/B testing (in many cases, bandits are even optimal). Bandits require less data to determine which model is the best and, at the same time, reduce opportu‐ nity cost as they route traffic to the better model more quickly. [fn:21]
 - Contextual bandits as an exploration strategy [cite:@guo2020deep]
 - Feature store [fn:22]
+* TODO ML in edge computing
+[cite:@2022]
 * Footnotes
+[fn:30] [[https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM][DeepLearningExamples/PyTorch/Recommendation/DLRM at master · NVIDIA/DeepLearningExamples]]
+
+[fn:29] [[https://www.microsoft.com/en-us/research/blog/deepspeed-extreme-scale-model-training-for-everyone/][DeepSpeed: Extreme-scale model training for everyone - Microsoft Research]]; [[https://www.deepspeed.ai/tutorials/pipeline/][Pipeline Parallelism - DeepSpeed]]
 [fn:28] [[https://github.com/cybertronai/gradient-checkpointing][cybertronai/gradient-checkpointing: Make huge neural nets fit in memory]]
 [fn:27] [[https://towardsdatascience.com/accelerating-deep-learning-using-distributed-sgd-an-overview-e66c4aee1a0c][Accelerating Deep Learning Using Distributed SGD — An Overview | by Branislav Holländer | Towards Data Science]]
 [fn:26] Practitioners have found that increasing the depth of Transformers by stacking on more atten- tion blocks generally improves accuracy [4]. As such, Transformers have motivated practitioners to explore increasingly deep model architectures.
@@ -1815,26 +2018,25 @@ Core ask: How often should I retrain my models? The rational for /test in produc
 [fn:21] [[https://towardsdatascience.com/a-b-testing-is-there-a-better-way-an-exploration-of-multi-armed-bandits-98ca927b357d][A/B testing — Is there a better way? An exploration of multi-armed bandits | by Greg Rafferty | Towards Data Science]]
 [fn:20] [[https://www.listendata.com/2014/08/excel-template-gain-and-lift-charts.html][Understand Gain and Lift Charts]]
 [fn:19] Continual learning is largely an infrastructural problem.
-[fn:18] [[https://blog.dataiku.com/mlops-champion-challenger-model-evaluation][MLOps: Champion/Challenger Model Evaluation in Dataiku]], [[https://medium.com/decision-automation/what-is-champion-challenger-and-how-does-it-enable-choosing-the-right-decision-f57b8b653149][What is Champion Challenger and How does It Enable Choosing the Right Decision? | by Arash Aghlara | FlexRule Decision Automation | Medium]]
+[fn:18] [[https://blog.dataiku.com/mlops-champion-challenger-model-evaluation][MLOps: Champion/Challenger Model Evaluation in Dataiku]]; [[https://medium.com/decision-automation/what-is-champion-challenger-and-how-does-it-enable-choosing-the-right-decision-f57b8b653149][What is Champion Challenger and How does It Enable Choosing the Right Decision? | by Arash Aghlara | FlexRule Decision Automation | Medium]]
 [fn:7] Vowpal Wabbit is a machine learning library that was developed by John Langford and his research team at Yahoo! Research and later Microsoft Research. The name "Vowpal Wabbit" is a playful corruption of the words "vorpal rabbit," which is a reference to the poem "Jabberwocky" by Lewis Carroll. In the poem, the word "vorpal" is a nonsensical adjective, and "rabbit" is a small mammal. In the context of the machine learning library, "Vowpal Wabbit" doesn't have a specific verbal meaning but serves as a whimsical name for the project.
 [fn:17] [[https://developers.google.com/machine-learning/guides/rules-of-ml#rule_36_avoid_feedback_loops_with_positional_features][Rules of Machine Learning:  |  Google for Developers]]
-[fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]], [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
+[fn:10] [[https://towardsdatascience.com/biases-in-recommender-systems-top-challenges-and-recent-breakthroughs-edcda59d30bf][Biases in Recommender Systems: Top Challenges and Recent Breakthroughs | by Samuel Flender | Towards Data Science]]; [[https://towardsdatascience.com/machine-learning-does-not-only-predict-the-future-it-actively-creates-it-1615895c80a9][Machine Learning Does Not Only Predict the Future, It Actively Creates It | by Samuel Flender | Towards Data Science]]
 [fn:8] [[https://en.wikipedia.org/wiki/Multi-armed_bandit][Multi-armed bandit - Wikipedia]]
 [fn:2] [[https://medium.com/p/7895bb1ab423][Why TikTok made its user so obsessive? The AI Algorithm that got you hooked. | by Catherine Wang | Towards Data Science]]
 [fn:16] https://www.kaggle.com/code/vipulgandhi/a-comprehensive-guide-to-ensemble-learning,  https://huggingface.co/docs/transformers/v4.18.0/en/performance
-[fn:15] [[https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions][Machine Learning Challenge Winning Solutions]], [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
+[fn:15] [[https://github.com/dmlc/xgboost/tree/master/demo#machine-learning-challenge-winning-solutions][Machine Learning Challenge Winning Solutions]]; [[https://en.wikipedia.org/wiki/Multiple-criteria_decision_analysis][Multiple-criteria decision analysis - Wikipedia]]
 [fn:14] [[https://booking.ai/dont-be-tricked-by-the-hashing-trick-192a6aae3087][Don’t be tricked by the Hashing Trick | by Lucas Bernardi | Booking.com Data Science]]
 [fn:13] http://web.stanford.edu/class/cs246/
 [fn:12] https://stanford-cs329s.github.io/syllabus.html
-[fn:11] [[https://medium.com/codex/metrics-to-measuring-calibration-in-deep-learning-36b0b11fe816][Metrics to Measuring Calibration in Deep-Learning | by Sieun Park | CodeX | Medium]], [[https://towardsdatascience.com/expected-calibration-error-ece-a-step-by-step-visual-explanation-with-python-code-c3e9aa12937d][Expected Calibration Error (ECE): A Step-by-Step Visual Explanation | by Maja Pavlovic | Jul, 2023 | Towards Data Science,]], [[https://towardsdatascience.com/a-comprehensive-guide-on-model-calibration-part-1-of-4-73466eb5e09a][A Comprehensive Guide on Model Calibration: What, When, and How | by Raj Sangani | Towards Data Science]], [[https://scikit-learn.org/stable/auto_examples/calibration/plot_compare_calibration.html#sphx-glr-auto-examples-calibration-plot-compare-calibration-py][Comparison of Calibration of Classifiers — scikit-learn 1.3.0 documentation]], https://huggingface.co/spaces/merve/uncertainty-calibration, https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration, https://www.kaggle.com/code/naiborhujosua/model-calibration, https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html, https://github.com/gpleiss/temperature_scaling
+[fn:11] [[https://medium.com/codex/metrics-to-measuring-calibration-in-deep-learning-36b0b11fe816][Metrics to Measuring Calibration in Deep-Learning | by Sieun Park | CodeX | Medium]]; [[https://towardsdatascience.com/expected-calibration-error-ece-a-step-by-step-visual-explanation-with-python-code-c3e9aa12937d][Expected Calibration Error (ECE): A Step-by-Step Visual Explanation | by Maja Pavlovic | Jul, 2023 | Towards Data Science,]]; [[https://towardsdatascience.com/a-comprehensive-guide-on-model-calibration-part-1-of-4-73466eb5e09a][A Comprehensive Guide on Model Calibration: What, When, and How | by Raj Sangani | Towards Data Science]]; [[https://scikit-learn.org/stable/auto_examples/calibration/plot_compare_calibration.html#sphx-glr-auto-examples-calibration-plot-compare-calibration-py][Comparison of Calibration of Classifiers — scikit-learn 1.3.0 documentation]]; https://huggingface.co/spaces/merve/uncertainty-calibration, https://www.kaggle.com/code/mateuscco/how-to-evaluate-model-calibration, https://www.kaggle.com/code/naiborhujosua/model-calibration, https://www.unofficialgoogledatascience.com/2021/04/why-model-calibration-matters-and-how.html, https://github.com/gpleiss/temperature_scaling
 [fn:9] [[https://medium.com/@quocnle/how-we-scaled-bert-to-serve-1-billion-daily-requests-on-cpus-d99be090db26][How We Scaled Bert To Serve 1+ Billion Daily Requests on CPUs | by Quoc N. Le | Medium]]
-[fn:6] [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]], [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]], https://github.com/huggingface/peft, [[https://lightning.ai/blog/how-to-finetune-gpt-like-large-language-models-on-a-custom-dataset/][How To Finetune GPT Like Large Language Models on a Custom Dataset - Lightning AI]], [[https://lightning.ai/pages/community/article/lora-llm/][Parameter-Efficient LLM Finetuning With Low-Rank Adaptation (LoRA) - Lightning AI]]
+[fn:6] [[https://magazine.sebastianraschka.com/p/finetuning-large-language-models][Finetuning Large Language Models]]; [[https://medium.com/@abonia/llm-series-parameter-efficient-fine-tuning-e9839fae44ac][LLM Series — Parameter Efficient Fine Tuning | by Abonia Sojasingarayar | Jun, 2023 | Medium]]; https://github.com/huggingface/peft, [[https://lightning.ai/blog/how-to-finetune-gpt-like-large-language-models-on-a-custom-dataset/][How To Finetune GPT Like Large Language Models on a Custom Dataset - Lightning AI]]; [[https://lightning.ai/pages/community/article/lora-llm/][Parameter-Efficient LLM Finetuning With Low-Rank Adaptation (LoRA) - Lightning AI]]
 [fn:5]
 - [[https://arxiv.org/abs/2304.01933][[2304.01933] LLM-Adapters: An Adapter Family for Parameter-Efficient Fine-Tuning of Large Language Models]]
 - [[https://arxiv.org/abs/2306.10723][[2306.10723] Fine-tuning Large Enterprise Language Models via Ontological Reasoning]]
 - [[https://magazine.sebastianraschka.com/p/finetuning-llms-with-adapters][Finetuning LLMs Efficiently with Adapters]]
-[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent, [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink]]
-, https://www.kaggle.com/code/anilkrsah/model-quantization, https://www.kaggle.com/code/ritvik1909/model-quantization, [[https://huggingface.co/docs/optimum/concept_guides/quantization][Quantization]]
+[fn:4] Using 16 bits to represent a float is called half precision. Instead of using floats, you can have a model entirely in integers; each integer takes only 8 bits to represent. Useful links: [[https://www.mathworks.com/company/newsletters/articles/what-is-int8-quantization-and-why-is-it-popular-for-deep-neural-networks.html][What Is int8 - Quantization and Why Is It Popular for Deep Neural Networks? - MATLAB & Simulink; ]][[https://huggingface.co/docs/optimum/concept_guides/quantization][Quantization]]; [[https://www.kaggle.com/code/anilkrsah/model-quantization][model quantization | Kaggle]]; [[https://www.kaggle.com/code/ritvik1909/model-quantization][Model Quantization | Kaggle]]
 [fn:3] [[https://web.stanford.edu/~rezab/classes/cme323/S20/][DAO: Distributed Algorithms and Optimization]]
 [fn:1] Chip Huyen, Designing Machine Learning Systems, p.138
 * References

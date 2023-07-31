@@ -1,4 +1,4 @@
-# [[file:../README.org::*Checkpointing][Checkpointing:1]]
+# [[file:../README.org::*Pipeline parallelism][Pipeline parallelism:3]]
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -37,4 +37,4 @@ loss = checkpoint["loss"]
 
 model.train()  # Set the model in train mode
 # Continue training...
-# Checkpointing:1 ends here
+# Pipeline parallelism:3 ends here
